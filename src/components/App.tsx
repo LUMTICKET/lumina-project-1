@@ -230,6 +230,19 @@ export default function Hero() {
       {/* Mobile search (inline, not sticky) */}
       {!isDesktop && (
         <View style={[styles.mobileSearchWrap, { paddingHorizontal: spacing(3), paddingTop: spacing(3) }]}>
+          <View style={styles.mobileBrandRow}>
+            <Text
+              style={[
+                styles.mobileBrand,
+                {
+                  color: colors.gold,
+                  fontFamily: fontFamilies.display,
+                },
+              ]}
+            >
+              LUMINΛ
+            </Text>
+          </View>
           <View
             style={[
               styles.searchBar,
@@ -417,6 +430,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     height: "100%",
+    border:"none",
+    outlineStyle: "none",
   },
   profilePoint: {
     width: 48,
@@ -427,6 +442,28 @@ const styles = StyleSheet.create({
   },
   mobileSearchWrap: {
     paddingBottom: spacing(2),
+    gap: spacing(2),
+  },
+  mobileBrandRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(2),
+  },
+  mobileBrandBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: radii.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mobileBrandBadgeText: {
+    fontSize: 18,
+    fontWeight: "900",
+  },
+  mobileBrand: {
+    fontSize: 28,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   pillsWrapper: {
     borderBottomWidth: 1,

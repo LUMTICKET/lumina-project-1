@@ -1,225 +1,157 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  Animated,
-  useWindowDimensions,
-  LayoutChangeEvent,
-  useColorScheme,
-  Platform,
-} from "react-native";
 import { Feather } from "@expo/vector-icons";
+import {
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+} from "react-native";
+import { useLumTheme } from "../theme/ThemeContext";
+import { radii, spacing } from "../theme/tokens";
 
-const getThemeColors = (scheme: "light" | "dark") => {
-  const isDark = scheme === "dark";
-  return {
-    ink: isDark ? "#FFFFFF" : "#0F172A",
-    inkMuted: isDark ? "#94A3B8" : "#64748B",
-    activePill: isDark ? "#FFFFFF" : "#0F172A",
-    activeText: isDark ? "#0F172A" : "#FFFFFF",
-    trackBorder: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(15, 23, 42, 0.08)",
-    gold: "#F59E0B",
-    iconBtnBg: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(15, 23, 42, 0.04)",
-  };
-};
+const SIDEBAR_ICONS = [
+  "home",
+  "search",
+  "plus-square",
+  "message-circle",
+  "bell",
+] as const;
 
-const LINKS = [
-  { label: "Home" },
-  { label: "Book" },
-  { label: "Stations" },
-  { label: "Support" },
+const BOTTOM_TABS = [
+  { icon: "home" as const },
+  { icon: "search" as const },
+  { icon: "plus-circle" as const },
+  { icon: "bell" as const },
+  { icon: "user" as const },
 ];
 
-type LayoutMap = Record<number, { x: number; width: number }>;
-
-export default function Navbar() {
-  const systemScheme = useColorScheme() ?? "light";
-  const resolvedScheme = systemScheme === "dark" ? "dark" : "light";
-  const colors = getThemeColors(resolvedScheme);
-  const { width } = useWindowDimensions();
-  const compact = width < 768;
-
-  const [selected, setSelected] = useState(0);
-  const [layouts, setLayouts] = useState<LayoutMap>({});
-  const pillX = useRef(new Animated.Value(0)).current;
-  const pillWidth = useRef(new Animated.Value(0)).current;
-  const pillReady = useRef(false);
-
-  useEffect(() => {
-    const l = layouts[selected];
-    if (!l) return;
-    Animated.parallel([
-      Animated.spring(pillX, {
-        toValue: l.x,
-        tension: 60,
-        friction: 10,
-        useNativeDriver: false,
-      }),
-      Animated.spring(pillWidth, {
-        toValue: l.width,
-        tension: 60,
-        friction: 10,
-        useNativeDriver: false,
-      }),
-    ]).start(() => {
-      pillReady.current = true;
-    });
-  }, [selected, layouts]);
-
-  const onTabLayout = (index: number) => (e: LayoutChangeEvent) => {
-    const { x, width: w } = e.nativeEvent.layout;
-    setLayouts((prev) => ({ ...prev, [index]: { x, width: w } }));
-  };
+function DesktopSidebar() {
+  const { colors } = useLumTheme();
 
   return (
-    <View style={styles.container}>
-      {/* Brand Logo */}
-      <View style={styles.brand}>
-        <View style={[styles.mark, { backgroundColor: colors.gold }]}>
-          <View style={[styles.markCore, { backgroundColor: colors.ink }]} />
+    <View
+      style={[
+        styles.sidebar,
+        {
+          backgroundColor: colors.bg,
+          borderRightColor: colors.border,
+        },
+        Platform.OS === "web"
+          ? ({ position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 1000 } as any)
+          : { position: "absolute", top: 0, left: 0, bottom: 0 },
+      ]}
+    >
+      {/* Logo */}
+      <Pressable style={styles.logoWrap}>
+        <View style={[styles.logoMark, { backgroundColor: colors.gold }]}>
+          <Text style={[styles.logoLetter, { color: colors.black }]}>L</Text>
         </View>
-        <Text style={[styles.brandText, { color: colors.ink }]}>
-          lumticket
-        </Text>
-      </View>
+      </Pressable>
 
-      {/* Floating Center Tabs */}
-      {!compact && (
-        <View style={[styles.linksTrack, { borderColor: colors.trackBorder }]}>
-          <Animated.View
-            style={[
-              styles.pill,
-              {
-                backgroundColor: colors.activePill,
-                transform: [{ translateX: pillX }],
-                width: pillWidth,
-              },
-            ]}
-          />
-          {LINKS.map((link, i) => {
-            const active = i === selected;
-            return (
-              <Pressable
-                key={link.label}
-                onLayout={onTabLayout(i)}
-                onPress={() => setSelected(i)}
-                style={({ pressed }) => [
-                  styles.tab,
-                  { opacity: pressed ? 0.7 : 1.0 },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.linkText,
-                    {
-                      color: active ? colors.activeText : colors.inkMuted,
-                      fontWeight: active ? "600" : "500",
-                    },
-                  ]}
-                >
-                  {link.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
-
-      {/* App Action Controls */}
-      <View style={styles.actions}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.iconButton,
-            { backgroundColor: colors.iconBtnBg, opacity: pressed ? 0.7 : 1 },
-          ]}
-        >
-          <Feather name="user" size={18} color={colors.ink} />
-        </Pressable>
-
-        {compact && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.iconButton,
-              { backgroundColor: colors.iconBtnBg, opacity: pressed ? 0.7 : 1 },
-            ]}
-          >
-            <Feather name="grid" size={18} color={colors.ink} />
+      {/* Icons only — no labels, no indicators, no placeholders */}
+      <View style={styles.navStack}>
+        {SIDEBAR_ICONS.map((icon, index) => (
+          <Pressable key={index} style={styles.iconBtn}>
+            <Feather name={icon} size={24} color={colors.ink} />
           </Pressable>
-        )}
+        ))}
       </View>
+
+      {/* Profile at bottom */}
+      <Pressable style={styles.profileBtn}>
+        <Feather name="settings" size={24} color={colors.ink} />
+      </Pressable>
     </View>
   );
 }
 
+function MobileBottomNav() {
+  const { colors } = useLumTheme();
+
+  return (
+    <View
+      style={[
+        styles.mobileNav,
+        {
+          backgroundColor: colors.bg,
+          borderTopColor: colors.border,
+        },
+        Platform.OS === "web"
+          ? ({ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 1000 } as any)
+          : { position: "absolute", bottom: 0, left: 0, right: 0 },
+      ]}
+    >
+      {BOTTOM_TABS.map((tab, index) => (
+        <Pressable key={index} style={styles.tabItem}>
+          <Feather name={tab.icon} size={26} color={colors.inkMuted} />
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
+export default function Navbar() {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 980;
+  return isDesktop ? <DesktopSidebar /> : <MobileBottomNav />;
+}
+
+// Need this import
+import { useWindowDimensions } from "react-native";
+
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
+  sidebar: {
+    width: 72,
+    borderRightWidth: 1,
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === "ios" ? 12 : 16,
-    paddingBottom: 12,
-    backgroundColor: "transparent",
+    paddingTop: Platform.OS === "ios" ? spacing(10) : spacing(5),
+    paddingBottom: spacing(4),
   },
-  brand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
+  logoWrap: {
+    marginBottom: spacing(6),
   },
-  mark: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+  logoMark: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.lg,
     alignItems: "center",
     justifyContent: "center",
   },
-  markCore: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  logoLetter: {
+    fontSize: 20,
+    fontWeight: "800",
   },
-  brandText: {
-    fontSize: 18,
-    letterSpacing: -0.3,
-    fontWeight: "700",
-  },
-  linksTrack: {
-    flexDirection: "row",
+  navStack: {
+    gap: spacing(2),
     alignItems: "center",
-    borderWidth: 1,
-    borderRadius: 999,
-    padding: 3,
-    position: "relative",
-    backgroundColor: "transparent",
   },
-  pill: {
-    position: "absolute",
-    top: 3,
-    bottom: 3,
-    left: 0,
-    borderRadius: 999,
-  },
-  tab: {
+  iconBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: radii.full,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 18,
-    paddingVertical: 7,
   },
-  linkText: {
-    fontSize: 13,
-  },
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  profileBtn: {
+    marginTop: "auto",
+    width: 48,
+    height: 48,
+    borderRadius: radii.full,
     alignItems: "center",
     justifyContent: "center",
+  },
+  mobileNav: {
+    height: 60,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-around",
+    paddingBottom: Platform.OS === "ios" ? spacing(2) : 0,
+  },
+  tabItem: {
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    height: "100%",
   },
 });

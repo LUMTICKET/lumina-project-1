@@ -1,15 +1,15 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-    Image,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    useWindowDimensions,
-    View,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
@@ -174,6 +174,7 @@ export default function Hero() {
   });
 
   const [selectedCategory, setSelectedCategory] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
@@ -194,7 +195,7 @@ export default function Hero() {
           <View style={styles.topBarInner}>
             <View
               style={[
-                styles.searchBar,
+                styles.desktopSearchBar,
                 {
                   backgroundColor: colors.bgAlt,
                   borderWidth: 1,
@@ -204,12 +205,13 @@ export default function Hero() {
             >
               <Feather name="search" size={20} color={colors.inkMuted} />
               <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
                 placeholder="Search"
                 placeholderTextColor={colors.inkMuted}
                 selectionColor={colors.gold}
-                caretColor={colors.gold}
                 style={[
-                  styles.searchInput,
+                  styles.desktopSearchInput,
                   { color: colors.ink, fontFamily: fontFamilies.body },
                 ]}
               />
@@ -245,7 +247,7 @@ export default function Hero() {
           </View>
           <View
             style={[
-              styles.searchBar,
+              styles.mobileSearchBar,
               {
                 backgroundColor: colors.bgAlt,
                 borderWidth: 1,
@@ -255,12 +257,13 @@ export default function Hero() {
           >
             <Feather name="search" size={20} color={colors.inkMuted} />
             <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
               placeholder="Search"
               placeholderTextColor={colors.inkMuted}
               selectionColor={colors.gold}
-              caretColor={colors.gold}
               style={[
-                styles.searchInput,
+                styles.mobileSearchInput,
                 { color: colors.ink, fontFamily: fontFamilies.body },
               ]}
             />
@@ -417,7 +420,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing(3),
   },
-  searchBar: {
+  desktopSearchBar: {
     flex: 1,
     height: 56,
     borderRadius: radii.full,
@@ -426,12 +429,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     gap: 10,
   },
-  searchInput: {
+  mobileSearchBar: {
+    width: "100%",
+    height: 50,
+    borderRadius: radii.full,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing(4),
+    gap: 10,
+  },
+  desktopSearchInput: {
     flex: 1,
     fontSize: 16,
-    height: "100%",
-    border:"none",
-    outlineStyle: "none",
+    paddingVertical: 0,
+  },
+  mobileSearchInput: {
+    flex: 1,
+    fontSize: 15,
+    paddingVertical: 0,
   },
   profilePoint: {
     width: 48,

@@ -1,16 +1,17 @@
 import { Feather } from "@expo/vector-icons";
 import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { radii, spacing } from "../theme/tokens";
+import ReelsIcon from "./ReelsIcon";
 
-type RouteName = "Home" | "Search" | "Create" | "Messaging" | "Feeds";
+type RouteName = "Home" | "Search" | "Create" | "Messaging" | "Feeds" | "Settings";
 
 interface NavbarProps {
   currentRoute: RouteName;
@@ -69,11 +70,18 @@ function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
               style={styles.iconBtn}
               onPress={() => onNavigate(item.route)}
             >
-              <Feather
-                name={item.icon}
-                size={24}
-                color={isActive ? colors.ink : colors.inkMuted}
-              />
+              {item.route === "Feeds" ? (
+                <ReelsIcon
+                  size={24}
+                  color={isActive ? colors.ink : colors.inkMuted}
+                />
+              ) : (
+                <Feather
+                  name={item.icon}
+                  size={24}
+                  color={isActive ? colors.ink : colors.inkMuted}
+                />
+              )}
             </Pressable>
           );
         })}
@@ -83,8 +91,15 @@ function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
       <View style={[styles.divider, { backgroundColor: colors.border, marginTop: "auto" }]} />
 
       {/* Settings at bottom */}
-      <Pressable style={styles.profileBtn}>
-        <Feather name="settings" size={24} color={colors.inkMuted} />
+      <Pressable
+        style={styles.profileBtn}
+        onPress={() => onNavigate("Settings")}
+      >
+        <Feather
+          name="settings"
+          size={24}
+          color={currentRoute === "Settings" ? colors.ink : colors.inkMuted}
+        />
       </Pressable>
     </View>
   );
@@ -114,11 +129,18 @@ function MobileBottomNav({ currentRoute, onNavigate }: NavbarProps) {
             style={styles.tabItem}
             onPress={() => onNavigate(item.route)}
           >
-            <Feather
-              name={item.icon}
-              size={26}
-              color={isActive ? colors.ink : colors.inkMuted}
-            />
+            {item.route === "Feeds" ? (
+              <ReelsIcon
+                size={26}
+                color={isActive ? colors.ink : colors.inkMuted}
+              />
+            ) : (
+              <Feather
+                name={item.icon}
+                size={26}
+                color={isActive ? colors.ink : colors.inkMuted}
+              />
+            )}
           </Pressable>
         );
       })}

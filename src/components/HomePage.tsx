@@ -158,7 +158,12 @@ const PINS = [
   },
 ];
 
-export default function HomePage() {
+interface HomePageProps {
+  onOpenAuth?: () => void;
+  onOpenSettings?: () => void;
+}
+
+export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
@@ -222,6 +227,7 @@ export default function HomePage() {
                 styles.profilePoint,
                 { backgroundColor: colors.bgAlt },
               ]}
+              onPress={() => onOpenAuth?.()}
             >
               <Feather name="user" size={20} color={colors.ink} />
             </Pressable>
@@ -232,18 +238,26 @@ export default function HomePage() {
       {/* Mobile search (inline, not sticky) */}
       {!isDesktop && (
         <View style={[styles.mobileSearchWrap, { paddingHorizontal: spacing(3), paddingTop: spacing(3) }]}>
-          <View style={styles.mobileBrandRow}>
-            <Text
+          <View style={styles.mobileActionRow}>
+            <Pressable
               style={[
-                styles.mobileBrand,
-                {
-                  color: colors.gold,
-                  fontFamily: fontFamilies.display,
-                },
+                styles.profilePoint,
+                { backgroundColor: colors.bgAlt },
               ]}
+              onPress={() => onOpenAuth?.()}
             >
-              LUMINΛ
-            </Text>
+              <Feather name="user" size={18} color={colors.ink} />
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.profilePoint,
+                { backgroundColor: colors.bgAlt },
+              ]}
+              onPress={() => onOpenSettings?.()}
+            >
+              <Feather name="settings" size={18} color={colors.ink} />
+            </Pressable>
           </View>
           <View
             style={[
@@ -459,9 +473,10 @@ const styles = StyleSheet.create({
     paddingBottom: spacing(2),
     gap: spacing(2),
   },
-  mobileBrandRow: {
+  mobileActionRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "space-between",
     gap: spacing(2),
   },
   mobileBrandBadge: {

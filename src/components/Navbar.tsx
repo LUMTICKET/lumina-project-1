@@ -207,7 +207,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-around",
     paddingTop: spacing(2),
-    paddingBottom: Platform.OS === "ios" ? spacing(12) : spacing(12),
+    paddingBottom: Platform.OS === "web" ? spacing(2) : spacing(12),
     elevation: 20,
     zIndex: 1000,
   },

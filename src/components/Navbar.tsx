@@ -210,6 +210,7 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === "web" ? spacing(2) : spacing(12),
     elevation: 20,
     zIndex: 1000,
+    overflow: "hidden",
   },
   tabItem: {
     alignItems: "center",

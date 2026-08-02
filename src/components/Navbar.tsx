@@ -1,31 +1,39 @@
 import { Feather } from "@expo/vector-icons";
 import {
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { radii, spacing } from "../theme/tokens";
 
-const SIDEBAR_ICONS = [
-  "home",
-  "search",
-  "plus-square",
-  "message-circle",
-  "bell",
-] as const;
+type RouteName = "Home" | "Search" | "Create" | "Messaging" | "Feeds";
 
-const BOTTOM_TABS = [
-  { icon: "home" as const },
-  { icon: "search" as const },
-  { icon: "plus-circle" as const },
-  { icon: "bell" as const },
-  { icon: "user" as const },
+interface NavbarProps {
+  currentRoute: RouteName;
+  onNavigate: (route: RouteName) => void;
+}
+
+const SIDEBAR_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName }[] = [
+  { icon: "home", route: "Home" },
+  { icon: "search", route: "Search" },
+  { icon: "plus-square", route: "Create" },
+  { icon: "message-circle", route: "Messaging" },
+  { icon: "bell", route: "Feeds" },
 ];
 
-function DesktopSidebar() {
+const MOBILE_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName }[] = [
+  { icon: "home", route: "Home" },
+  { icon: "search", route: "Search" },
+  { icon: "plus-circle", route: "Create" },
+  { icon: "message-circle", route: "Messaging" }, // swapped user → message-circle so all 5 pages are reachable
+  { icon: "bell", route: "Feeds" },
+];
+
+function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
   const { colors } = useLumTheme();
 
   return (
@@ -42,30 +50,47 @@ function DesktopSidebar() {
       ]}
     >
       {/* Logo */}
-      <Pressable style={styles.logoWrap}>
+      <Pressable style={styles.logoWrap} onPress={() => onNavigate("Home")}>
         <View style={[styles.logoMark, { backgroundColor: colors.gold }]}>
           <Text style={[styles.logoLetter, { color: colors.black }]}>L</Text>
         </View>
       </Pressable>
 
-      {/* Icons only — no labels, no indicators, no placeholders */}
+      {/* Divider line */}
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+      {/* Icons only */}
       <View style={styles.navStack}>
-        {SIDEBAR_ICONS.map((icon, index) => (
-          <Pressable key={index} style={styles.iconBtn}>
-            <Feather name={icon} size={24} color={colors.ink} />
-          </Pressable>
-        ))}
+        {SIDEBAR_ITEMS.map((item) => {
+          const isActive = item.route === currentRoute;
+          return (
+            <Pressable
+              key={item.route}
+              style={styles.iconBtn}
+              onPress={() => onNavigate(item.route)}
+            >
+              <Feather
+                name={item.icon}
+                size={24}
+                color={isActive ? colors.ink : colors.inkMuted}
+              />
+            </Pressable>
+          );
+        })}
       </View>
 
-      {/* Profile at bottom */}
+      {/* Divider line before profile/settings */}
+      <View style={[styles.divider, { backgroundColor: colors.border, marginTop: "auto" }]} />
+
+      {/* Settings at bottom */}
       <Pressable style={styles.profileBtn}>
-        <Feather name="settings" size={24} color={colors.ink} />
+        <Feather name="settings" size={24} color={colors.inkMuted} />
       </Pressable>
     </View>
   );
 }
 
-function MobileBottomNav() {
+function MobileBottomNav({ currentRoute, onNavigate }: NavbarProps) {
   const { colors } = useLumTheme();
 
   return (
@@ -81,23 +106,31 @@ function MobileBottomNav() {
           : { position: "absolute", bottom: 0, left: 0, right: 0 },
       ]}
     >
-      {BOTTOM_TABS.map((tab, index) => (
-        <Pressable key={index} style={styles.tabItem}>
-          <Feather name={tab.icon} size={26} color={colors.inkMuted} />
-        </Pressable>
-      ))}
+      {MOBILE_ITEMS.map((item) => {
+        const isActive = item.route === currentRoute;
+        return (
+          <Pressable
+            key={item.route}
+            style={styles.tabItem}
+            onPress={() => onNavigate(item.route)}
+          >
+            <Feather
+              name={item.icon}
+              size={26}
+              color={isActive ? colors.ink : colors.inkMuted}
+            />
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
 
-export default function Navbar() {
+export default function Navbar(props: NavbarProps) {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
-  return isDesktop ? <DesktopSidebar /> : <MobileBottomNav />;
+  return isDesktop ? <DesktopSidebar {...props} /> : <MobileBottomNav {...props} />;
 }
-
-// Need this import
-import { useWindowDimensions } from "react-native";
 
 const styles = StyleSheet.create({
   sidebar: {
@@ -108,7 +141,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing(4),
   },
   logoWrap: {
-    marginBottom: spacing(6),
+    marginBottom: spacing(4),
   },
   logoMark: {
     width: 40,
@@ -120,6 +153,11 @@ const styles = StyleSheet.create({
   logoLetter: {
     fontSize: 20,
     fontWeight: "800",
+  },
+  divider: {
+    width: 32,
+    height: 1,
+    marginVertical: spacing(2),
   },
   navStack: {
     gap: spacing(2),
@@ -133,12 +171,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   profileBtn: {
-    marginTop: "auto",
     width: 48,
     height: 48,
     borderRadius: radii.full,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: spacing(2),
   },
   mobileNav: {
     height: 60,

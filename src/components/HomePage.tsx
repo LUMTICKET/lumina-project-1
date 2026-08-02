@@ -158,7 +158,7 @@ const PINS = [
   },
 ];
 
-export default function Hero() {
+export default function HomePage() {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;

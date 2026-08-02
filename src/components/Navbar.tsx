@@ -1,11 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import {
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { radii, spacing } from "../theme/tokens";
@@ -201,12 +201,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing(2),
   },
   mobileNav: {
-    height: 60,
+    minHeight: 60,
     borderTopWidth: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    paddingBottom: Platform.OS === "ios" ? spacing(2) : 0,
+    paddingTop: spacing(2),
+    paddingBottom: Platform.OS === "ios" ? spacing(12) : spacing(12),
+    elevation: 20,
+    zIndex: 1000,
   },
   tabItem: {
     alignItems: "center",

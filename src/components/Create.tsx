@@ -8,6 +8,7 @@ import {
     TextInput,
     useWindowDimensions,
     View,
+    Platform,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
@@ -35,7 +36,7 @@ export default function Create() {
         style={[
           styles.header,
           {
-            backgroundColor: colors.bgAlt,
+            backgroundColor: colors.bg,
             borderBottomColor: colors.border,
           },
         ]}
@@ -259,6 +260,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
+    marginTop: Platform.OS === "web" ? 0 : 30,
   },
   headerTitle: {
     fontSize: 20,

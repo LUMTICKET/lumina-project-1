@@ -1,5 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
 import {
   Image,
   Platform,
@@ -11,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useState } from "react";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 
@@ -31,7 +31,7 @@ const RESULTS = [
   {
     id: "s1",
     title: "Afrobeat Night Lagos",
-    subtitle: "Eko Hotel • Dec 15",
+    subtitle: "Eko Hotel \u2022 Dec 15",
     image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop",
     height: 340,
     tag: "Events",
@@ -39,7 +39,7 @@ const RESULTS = [
   {
     id: "s2",
     title: "Abuja Express Coach",
-    subtitle: "Daily departures • MWK 4,500",
+    subtitle: "Daily departures \u2022 MWK 4,500",
     image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&auto=format&fit=crop",
     height: 220,
     tag: "Buses",
@@ -47,7 +47,7 @@ const RESULTS = [
   {
     id: "s3",
     title: "Same-Day Delivery",
-    subtitle: "Lagos to Ibadan • Live track",
+    subtitle: "Lagos to Ibadan \u2022 Live track",
     image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop",
     height: 300,
     tag: "Courier",
@@ -55,7 +55,7 @@ const RESULTS = [
   {
     id: "s4",
     title: "Night Garden Fest",
-    subtitle: "Flashback event • Sold out",
+    subtitle: "Flashback event \u2022 Sold out",
     image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&auto=format&fit=crop",
     height: 380,
     tag: "Events",
@@ -63,7 +63,7 @@ const RESULTS = [
   {
     id: "s5",
     title: "Luxury Bus to Accra",
-    subtitle: "VIP seats • MWK 25,000",
+    subtitle: "VIP seats \u2022 MWK 25,000",
     image: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600&auto=format&fit=crop",
     height: 260,
     tag: "Buses",
@@ -71,7 +71,7 @@ const RESULTS = [
   {
     id: "s6",
     title: "Package Insurance",
-    subtitle: "Fragile goods • Full cover",
+    subtitle: "Fragile goods \u2022 Full cover",
     image: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&auto=format&fit=crop",
     height: 240,
     tag: "Courier",
@@ -79,7 +79,7 @@ const RESULTS = [
   {
     id: "s7",
     title: "Comedy Central Live",
-    subtitle: "Muson Centre • Jan 10",
+    subtitle: "Muson Centre \u2022 Jan 10",
     image: "https://images.unsplash.com/photo-1503095392237-fc55088350b9?w=600&auto=format&fit=crop",
     height: 320,
     tag: "Events",
@@ -87,7 +87,7 @@ const RESULTS = [
   {
     id: "s8",
     title: "Interstate Shuttle",
-    subtitle: "Enugu–PH • Book now",
+    subtitle: "Enugu\u2013PH \u2022 Book now",
     image: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&auto=format&fit=crop",
     height: 200,
     tag: "Buses",
@@ -103,7 +103,7 @@ const RESULTS = [
   {
     id: "s10",
     title: "Express Cargo",
-    subtitle: "Bulk delivery • 24h",
+    subtitle: "Bulk delivery \u2022 24h",
     image: "https://images.unsplash.com/photo-1512909006721-3d6018887383?w=600&auto=format&fit=crop",
     height: 280,
     tag: "Courier",
@@ -111,7 +111,7 @@ const RESULTS = [
   {
     id: "s11",
     title: "Jazz Under the Stars",
-    subtitle: "Ikoyi • Dec 22",
+    subtitle: "Ikoyi \u2022 Dec 22",
     image: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=600&auto=format&fit=crop",
     height: 330,
     tag: "Events",
@@ -119,14 +119,19 @@ const RESULTS = [
   {
     id: "s12",
     title: "Coastal Route Pass",
-    subtitle: "Lekki–Epe scenic",
+    subtitle: "Lekki\u2013Epe scenic",
     image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&auto=format&fit=crop",
     height: 270,
     tag: "Buses",
   },
 ];
 
-export default function SearchPage() {
+interface SearchPageProps {
+  onOpenAuth?: () => void;
+  onOpenSettings?: () => void;
+}
+
+export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPageProps) {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
@@ -144,23 +149,91 @@ export default function SearchPage() {
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [query, setQuery] = useState("");
 
+  const iconOffset = Platform.OS !== "web" ? { marginTop: 20 } : {};
+
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-      {/* Search Bar */}
-      <View
-        style={[
-          styles.searchBarWrap,
-          {
-            backgroundColor: colors.bgAlt,
-            borderBottomColor: colors.border,
-          },
-          isDesktop && Platform.OS === "web"
-            ? ({ position: "sticky", top: 0, zIndex: 50 } as any)
-            : {},
-        ]}
-      >
-        <View style={styles.searchBarInner}>
-          <View style={[styles.searchBar, { backgroundColor: colors.bgAlt }]}>
+      {/* Desktop Search Bar */}
+      {isDesktop && (
+        <View
+          style={[
+            styles.searchBarWrap,
+            {
+              backgroundColor: colors.bg,
+              borderBottomColor: colors.border,
+            },
+            Platform.OS === "web"
+              ? ({ position: "sticky", top: 0, zIndex: 50 } as any)
+              : {},
+          ]}
+        >
+          <View style={styles.searchBarInner}>
+            <View
+              style={[
+                styles.searchBar,
+                {
+                  backgroundColor: colors.bgAlt,
+                  borderColor: colors.border,
+                },
+              ]}
+            >
+              <Feather name="search" size={20} color={colors.inkMuted} />
+              <TextInput
+                placeholder="Search events, buses, courier..."
+                placeholderTextColor={colors.inkMuted}
+                value={query}
+                onChangeText={setQuery}
+                style={[
+                  styles.searchInput,
+                  { color: colors.ink, fontFamily: fontFamilies.body },
+                ]}
+              />
+              {query.length > 0 && (
+                <Pressable onPress={() => setQuery("")}>
+                  <Feather name="x" size={18} color={colors.inkMuted} />
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Mobile Search + Action Icons */}
+      {!isDesktop && (
+        <View style={[styles.mobileSearchWrap, { paddingHorizontal: spacing(3), paddingTop: spacing(3) }]}>
+          <View style={styles.mobileActionRow}>
+            <Pressable
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.bgAlt },
+                iconOffset,
+              ]}
+              onPress={() => onOpenAuth?.()}
+            >
+              <Feather name="user" size={20} color={colors.ink} />
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.bgAlt },
+                iconOffset,
+              ]}
+              onPress={() => onOpenSettings?.()}
+            >
+              <Feather name="settings" size={20} color={colors.ink} />
+            </Pressable>
+          </View>
+
+          <View
+            style={[
+              styles.searchBar,
+              {
+                backgroundColor: colors.bgAlt,
+                borderColor: colors.border,
+              },
+            ]}
+          >
             <Feather name="search" size={20} color={colors.inkMuted} />
             <TextInput
               placeholder="Search events, buses, courier..."
@@ -179,14 +252,14 @@ export default function SearchPage() {
             )}
           </View>
         </View>
-      </View>
+      )}
 
       {/* Category Pills */}
       <View
         style={[
           styles.pillsWrapper,
           {
-            backgroundColor: colors.bgAlt,
+            backgroundColor: colors.bg,
             borderBottomColor: colors.border,
           },
         ]}
@@ -324,17 +397,36 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
   searchBar: {
-    height: 48,
+    height: 52,
     borderRadius: radii.full,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing(4),
     gap: 10,
+    borderWidth: 1,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
     height: "100%",
+    paddingVertical: 0,
+  },
+  mobileSearchWrap: {
+    paddingBottom: spacing(2),
+    gap: spacing(2.5),
+  },
+  mobileActionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing(2),
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.full,
+    alignItems: "center",
+    justifyContent: "center",
   },
   pillsWrapper: {
     borderBottomWidth: 1,

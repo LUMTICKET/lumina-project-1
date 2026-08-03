@@ -1,12 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    useWindowDimensions,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
@@ -40,22 +40,12 @@ type SettingItem = {
   icon: keyof typeof Feather.glyphMap;
   label: string;
   hasToggle?: boolean;
-  toggleValue?: boolean;
-  onToggle?: (v: boolean) => void;
 };
 
 type SettingSection = {
   title: string;
   items: SettingItem[];
 };
-
-const PAYMENT_METHODS = [
-  "TNM Mpamba",
-  "Airtel Money",
-  "MasterCard",
-  "PayPal",
-  "Card",
-];
 
 const SECTIONS: SettingSection[] = [
   {
@@ -94,7 +84,6 @@ export default function Settings() {
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-      {/* Header */}
       <View
         style={[
           styles.header,
@@ -126,15 +115,7 @@ export default function Settings() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View
-          style={[
-            {
-              maxWidth: 640,
-              alignSelf: "center",
-              width: "100%",
-            },
-          ]}
-        >
+        <View style={[{ maxWidth: 640, alignSelf: "center", width: "100%" }]}>
           {SECTIONS.map((section) => (
             <View key={section.title} style={styles.section}>
               <Text
@@ -188,33 +169,6 @@ export default function Settings() {
 
                       {item.hasToggle ? (
                         <Toggle value={faceId} onValueChange={setFaceId} />
-                      ) : item.label === "Accepted payment methods" ? (
-                        <View style={styles.paymentPillsWrap}>
-                          {PAYMENT_METHODS.map((method) => (
-                            <View
-                              key={method}
-                              style={[
-                                styles.paymentPill,
-                                {
-                                  backgroundColor: colors.bgAlt,
-                                  borderColor: colors.border,
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.paymentPillText,
-                                  {
-                                    color: colors.ink,
-                                    fontFamily: fontFamilies.bodySemi,
-                                  },
-                                ]}
-                              >
-                                {method}
-                              </Text>
-                            </View>
-                          ))}
-                        </View>
                       ) : (
                         <Feather
                           name="chevron-right"
@@ -229,7 +183,6 @@ export default function Settings() {
             </View>
           ))}
 
-          {/* Billing CTA */}
           <Pressable
             style={[
               styles.logoutCard,
@@ -278,22 +231,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-  },
-  paymentPillsWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-    gap: spacing(2),
-    maxWidth: 280,
-  },
-  paymentPill: {
-    borderWidth: 1,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing(2.5),
-    paddingVertical: spacing(1),
-  },
-  paymentPillText: {
-    fontSize: 11,
   },
   scroll: {
     flex: 1,

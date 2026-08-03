@@ -30,7 +30,7 @@ export default function AuthModal({
   initialMode = "signup",
 }: AuthModalProps) {
   const { colors } = useLumTheme();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isDesktop = width >= 980;
   const isSmallPhone = width < 380;
 
@@ -50,6 +50,7 @@ export default function AuthModal({
   };
 
   const cardPadding = isDesktop ? spacing(6) : isSmallPhone ? spacing(4) : spacing(5);
+  const wrapperPadding = isDesktop ? spacing(6) : spacing(3);
 
   return (
     <Modal
@@ -57,127 +58,149 @@ export default function AuthModal({
       transparent
       animationType="fade"
       onRequestClose={onClose}
+      statusBarTranslucent
     >
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={onClose} />
 
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
-          style={styles.keyboardWrap}
+          style={styles.keyboardView}
           keyboardVerticalOffset={Platform.OS === "ios" ? 40 : 0}
         >
           <ScrollView
-            contentContainerStyle={[
-              styles.scrollContent,
-              { padding: isDesktop ? spacing(4) : spacing(2) },
-            ]}
+            contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            overScrollMode="never"
+            bounces={false}
           >
-            <View
-              style={[
-                styles.card,
-                {
-                  backgroundColor: colors.bg,
-                  borderColor: colors.border,
-                  shadowColor: colors.shadow,
-                  width: isDesktop ? 420 : "100%",
-                  maxWidth: isDesktop ? 420 : 520,
-                  padding: cardPadding,
-                  paddingTop: cardPadding + spacing(2),
-                },
-              ]}
-            >
-              {/* Close */}
-              <Pressable style={styles.closeBtn} onPress={onClose}>
-                <Feather name="x" size={22} color={colors.inkMuted} />
-              </Pressable>
+            <View style={[styles.cardWrapper, { padding: wrapperPadding }]}>
+              <View
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: colors.bg,
+                    borderColor: colors.border,
+                    shadowColor: colors.shadow,
+                    padding: cardPadding,
+                    paddingTop: cardPadding + spacing(2),
+                  },
+                ]}
+              >
+                {/* Close */}
+                <Pressable style={styles.closeBtn} onPress={onClose}>
+                  <Feather name="x" size={22} color={colors.inkMuted} />
+                </Pressable>
 
-              {/* Logo */}
-              <View style={styles.logoArea}>
-                <View style={[styles.logoMark, { backgroundColor: colors.gold }]}>
-                  <Text style={[styles.logoLetter, { color: colors.black }]}>
-                    L
+                {/* Logo */}
+                <View style={styles.logoArea}>
+                  <View style={[styles.logoMark, { backgroundColor: colors.gold }]}>
+                    <Text style={[styles.logoLetter, { color: colors.black }]}>
+                      L
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.logoText,
+                      { color: colors.ink, fontFamily: fontFamilies.display },
+                    ]}
+                  >
+                    lumticket
                   </Text>
                 </View>
+
+                {/* Heading */}
                 <Text
                   style={[
-                    styles.logoText,
-                    { color: colors.ink, fontFamily: fontFamilies.display },
+                    styles.heading,
+                    {
+                      color: colors.ink,
+                      fontFamily: fontFamilies.display,
+                      fontSize: isSmallPhone ? 20 : 24,
+                    },
                   ]}
                 >
-                  lumticket
+                  {isSignup ? "Welcome to LumTicket" : "Welcome back"}
                 </Text>
-              </View>
-
-              {/* Heading */}
-              <Text
-                style={[
-                  styles.heading,
-                  {
-                    color: colors.ink,
-                    fontFamily: fontFamilies.display,
-                    fontSize: isSmallPhone ? 20 : 24,
-                  },
-                ]}
-              >
-                {isSignup ? "Welcome to LumTicket" : "Welcome back"}
-              </Text>
-              <Text
-                style={[
-                  styles.subheading,
-                  { color: colors.inkMuted, fontFamily: fontFamilies.body },
-                ]}
-              >
-                {isSignup
-                  ? "Find events, book buses, and track deliveries"
-                  : "Log in to continue your journey"}
-              </Text>
-
-              {/* Google */}
-              <Pressable
-                style={[
-                  styles.socialBtn,
-                  {
-                    backgroundColor: colors.bgAlt,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Image
-                  source={require("../../assets/images/icons8-google-50.png")}
-                  style={styles.googleIcon}
-                />
                 <Text
                   style={[
-                    styles.socialText,
-                    { color: colors.ink, fontFamily: fontFamilies.bodySemi },
-                  ]}
-                >
-                  Continue with Google
-                </Text>
-              </Pressable>
-
-              {/* Divider */}
-              <View style={styles.dividerRow}>
-                <View
-                  style={[styles.dividerLine, { backgroundColor: colors.border }]}
-                />
-                <Text
-                  style={[
-                    styles.dividerText,
+                    styles.subheading,
                     { color: colors.inkMuted, fontFamily: fontFamilies.body },
                   ]}
                 >
-                  or
+                  {isSignup
+                    ? "Find events, book buses, and track deliveries"
+                    : "Log in to continue your journey"}
                 </Text>
-                <View
-                  style={[styles.dividerLine, { backgroundColor: colors.border }]}
-                />
-              </View>
 
-              {/* Form */}
-              {isSignup && (
+                {/* Google */}
+                <Pressable
+                  style={[
+                    styles.socialBtn,
+                    {
+                      backgroundColor: colors.bgAlt,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
+                  <Image
+                    source={require("../../assets/images/icons8-google-50.png")}
+                    style={styles.googleIcon}
+                  />
+                  <Text
+                    style={[
+                      styles.socialText,
+                      { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                    ]}
+                  >
+                    Continue with Google
+                  </Text>
+                </Pressable>
+
+                {/* Divider */}
+                <View style={styles.dividerRow}>
+                  <View
+                    style={[styles.dividerLine, { backgroundColor: colors.border }]}
+                  />
+                  <Text
+                    style={[
+                      styles.dividerText,
+                      { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                    ]}
+                  >
+                    or
+                  </Text>
+                  <View
+                    style={[styles.dividerLine, { backgroundColor: colors.border }]}
+                  />
+                </View>
+
+                {/* Form */}
+                {isSignup && (
+                  <View
+                    style={[
+                      styles.inputWrap,
+                      {
+                        backgroundColor: colors.bgAlt,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    <Feather name="user" size={18} color={colors.inkMuted} />
+                    <TextInput
+                      placeholder="Full name"
+                      placeholderTextColor={colors.inkMuted}
+                      value={name}
+                      onChangeText={setName}
+                      style={[
+                        styles.input,
+                        { color: colors.ink, fontFamily: fontFamilies.body },
+                      ]}
+                    />
+                  </View>
+                )}
+
                 <View
                   style={[
                     styles.inputWrap,
@@ -187,123 +210,101 @@ export default function AuthModal({
                     },
                   ]}
                 >
-                  <Feather name="user" size={18} color={colors.inkMuted} />
+                  <Feather name="mail" size={18} color={colors.inkMuted} />
                   <TextInput
-                    placeholder="Full name"
+                    placeholder="Email"
                     placeholderTextColor={colors.inkMuted}
-                    value={name}
-                    onChangeText={setName}
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
                     style={[
                       styles.input,
                       { color: colors.ink, fontFamily: fontFamilies.body },
                     ]}
                   />
                 </View>
-              )}
 
-              <View
-                style={[
-                  styles.inputWrap,
-                  {
-                    backgroundColor: colors.bgAlt,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Feather name="mail" size={18} color={colors.inkMuted} />
-                <TextInput
-                  placeholder="Email"
-                  placeholderTextColor={colors.inkMuted}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
+                <View
                   style={[
-                    styles.input,
-                    { color: colors.ink, fontFamily: fontFamilies.body },
-                  ]}
-                />
-              </View>
-
-              <View
-                style={[
-                  styles.inputWrap,
-                  {
-                    backgroundColor: colors.bgAlt,
-                    borderColor: colors.border,
-                  },
-                ]}
-              >
-                <Feather name="lock" size={18} color={colors.inkMuted} />
-                <TextInput
-                  placeholder="Password"
-                  placeholderTextColor={colors.inkMuted}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  style={[
-                    styles.input,
-                    { color: colors.ink, fontFamily: fontFamilies.body },
-                  ]}
-                />
-                <Pressable onPress={() => setShowPassword(!showPassword)}>
-                  <Feather
-                    name={showPassword ? "eye-off" : "eye"}
-                    size={18}
-                    color={colors.inkMuted}
-                  />
-                </Pressable>
-              </View>
-
-              {/* Submit */}
-              <Pressable
-                style={[
-                  styles.submitBtn,
-                  { backgroundColor: colors.gold },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.submitText,
-                    { color: colors.white, fontFamily: fontFamilies.bodySemi },
+                    styles.inputWrap,
+                    {
+                      backgroundColor: colors.bgAlt,
+                      borderColor: colors.border,
+                    },
                   ]}
                 >
-                  {isSignup ? "Create account" : "Log in"}
-                </Text>
-              </Pressable>
+                  <Feather name="lock" size={18} color={colors.inkMuted} />
+                  <TextInput
+                    placeholder="Password"
+                    placeholderTextColor={colors.inkMuted}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    style={[
+                      styles.input,
+                      { color: colors.ink, fontFamily: fontFamilies.body },
+                    ]}
+                  />
+                  <Pressable onPress={() => setShowPassword(!showPassword)}>
+                    <Feather
+                      name={showPassword ? "eye-off" : "eye"}
+                      size={18}
+                      color={colors.inkMuted}
+                    />
+                  </Pressable>
+                </View>
 
-              {/* Toggle */}
-              <View style={styles.toggleRow}>
+                {/* Submit */}
+                <Pressable
+                  style={[
+                    styles.submitBtn,
+                    { backgroundColor: colors.gold },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.submitText,
+                      { color: colors.white, fontFamily: fontFamilies.bodySemi },
+                    ]}
+                  >
+                    {isSignup ? "Create account" : "Log in"}
+                  </Text>
+                </Pressable>
+
+                {/* Toggle */}
+                <View style={styles.toggleRow}>
+                  <Text
+                    style={[
+                      styles.toggleText,
+                      { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                    ]}
+                  >
+                    {isSignup ? "Already have an account?" : "No account yet?"}
+                  </Text>
+                  <Pressable onPress={toggleMode}>
+                    <Text
+                      style={[
+                        styles.toggleLink,
+                        { color: colors.gold, fontFamily: fontFamilies.bodySemi },
+                      ]}
+                    >
+                      {isSignup ? "Log in" : "Sign up"}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {/* Terms */}
                 <Text
                   style={[
-                    styles.toggleText,
+                    styles.terms,
                     { color: colors.inkMuted, fontFamily: fontFamilies.body },
                   ]}
                 >
-                  {isSignup ? "Already have an account?" : "No account yet?"}
+                  By continuing, you agree to LumTicket’s Terms of Service and
+                  Privacy Policy.
                 </Text>
-                <Pressable onPress={toggleMode}>
-                  <Text
-                    style={[
-                      styles.toggleLink,
-                      { color: colors.gold, fontFamily: fontFamilies.bodySemi },
-                    ]}
-                  >
-                    {isSignup ? "Log in" : "Sign up"}
-                  </Text>
-                </Pressable>
               </View>
-
-              {/* Terms */}
-              <Text
-                style={[
-                  styles.terms,
-                  { color: colors.inkMuted, fontFamily: fontFamilies.body },
-                ]}
-              >
-                By continuing, you agree to LumTicket's Terms of Service and
-                Privacy Policy.
-              </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -316,8 +317,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "center",
-    alignItems: "center",
   },
   backdrop: {
     position: "absolute",
@@ -326,19 +325,21 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  keyboardWrap: {
+  keyboardView: {
     flex: 1,
     width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    alignItems: "center",
+  },
+  cardWrapper: {
     width: "100%",
+    alignItems: "center",
   },
   card: {
+    width: "100%",
+    maxWidth: 480,
     borderRadius: radii.xl,
     borderWidth: 1,
     shadowOpacity: 0.15,
@@ -416,6 +417,7 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
+    minWidth: 0,
   },
   dividerText: {
     fontSize: 13,
@@ -434,6 +436,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     height: "100%",
+    minWidth: 0,
   },
   submitBtn: {
     height: 48,
@@ -452,6 +455,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: spacing(1.5),
     marginBottom: spacing(3),
+    flexWrap: "wrap",
   },
   toggleText: {
     fontSize: 14,

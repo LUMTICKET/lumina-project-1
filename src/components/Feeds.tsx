@@ -385,7 +385,7 @@ export default function Feeds() {
             },
           ]}
         >
-          <Feather name="search" size={18} color={colors.inkMuted} />
+          <Feather name="search" size={20} color={colors.inkMuted} />
           <TextInput
             placeholder="Search feeds"
             placeholderTextColor={colors.inkMuted}
@@ -401,7 +401,7 @@ export default function Feeds() {
           />
           {query.length > 0 && (
             <Pressable onPress={() => setQuery("")}>
-              <Feather name="x" size={18} color={colors.inkMuted} />
+              <Feather name="x" size={20} color={colors.inkMuted} />
             </Pressable>
           )}
         </View>
@@ -448,22 +448,23 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   searchWrap: {
-    paddingHorizontal: spacing(3),
+    paddingHorizontal: spacing(4),
     paddingVertical: spacing(2),
     borderBottomWidth: 1,
+    marginTop: Platform.OS === "web" ? 0 : 40,
   },
   searchBar: {
+    width: "100%",
+    height: 50,
+    borderRadius: radii.full,
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing(2),
-    borderWidth: 1,
-    borderRadius: radii.full,
-    paddingHorizontal: spacing(3),
-    paddingVertical: spacing(2),
+    paddingHorizontal: spacing(4),
+    gap: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
   },
   scroll: {
     flex: 1,

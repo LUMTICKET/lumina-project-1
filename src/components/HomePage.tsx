@@ -181,6 +181,8 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
+  const iconOffset = Platform.OS !== "web" ? { marginTop: 20 } : {};
+
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
       {/* Top bar: Search + Profile */}
@@ -235,7 +237,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
         </View>
       )}
 
-      {/* Mobile search (inline, not sticky) */}
+      {/* Mobile search */}
       {!isDesktop && (
         <View style={[styles.mobileSearchWrap, { paddingHorizontal: spacing(3), paddingTop: spacing(3) }]}>
           <View style={styles.mobileActionRow}>
@@ -243,6 +245,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               style={[
                 styles.profilePoint,
                 { backgroundColor: colors.bgAlt },
+                iconOffset,
               ]}
               onPress={() => onOpenAuth?.()}
             >
@@ -253,6 +256,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               style={[
                 styles.profilePoint,
                 { backgroundColor: colors.bgAlt },
+                iconOffset,
               ]}
               onPress={() => onOpenSettings?.()}
             >
@@ -478,22 +482,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing(2),
-  },
-  mobileBrandBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: radii.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  mobileBrandBadgeText: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  mobileBrand: {
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: 1,
   },
   pillsWrapper: {
     borderBottomWidth: 1,

@@ -36,7 +36,7 @@ export default function Create() {
         style={[
           styles.header,
           {
-            backgroundColor: colors.bggit branch,
+            backgroundColor: colors.bg,
             borderBottomColor: colors.border,
           },
         ]}

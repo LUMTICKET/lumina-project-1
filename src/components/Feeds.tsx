@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useVideoPlayer, VideoView } from "expo-video";
+import { useEffect, useState } from "react";
 import {
   Image,
   Platform,
@@ -19,7 +20,7 @@ const POSTS = [
     id: "p1",
     company: "Eko Hotel & Suites",
     avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 1240,
     caption: "Detty December kicks off this Friday! Afrobeat Night under the stars with live performances from top artists. Limited VIP tables remaining.",
@@ -32,7 +33,7 @@ const POSTS = [
     id: "p2",
     company: "ABC Transport Plc",
     avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 856,
     caption: "New luxury sleeper buses now on the Lagos–Kano route. Recliner seats, Wi-Fi, charging ports & onboard entertainment. Book your seat today!",
@@ -58,10 +59,10 @@ const POSTS = [
     id: "p4",
     company: "Night Garden Fest",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 5602,
-    caption: "Flashback to the most magical night of 2025. Early bird tickets for 2026 are now live. Don’t miss the garden lights, live bands & food trucks.",
+    caption: "Flashback to the most magical night of 2025. Early bird tickets for 2026 are now live. Don't miss the garden lights, live bands & food trucks.",
     price: "MWK 10,000",
     date: "Mar 8–10, 2026",
     location: "Lekki Conservation Centre",
@@ -74,7 +75,7 @@ const POSTS = [
     media: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&auto=format&fit=crop",
     isVideo: false,
     likes: 432,
-    caption: "Corporate teams, this one’s for you. Monthly shuttle passes with dedicated pick-up routes. Stress-free commute for your staff.",
+    caption: "Corporate teams, this one's for you. Monthly shuttle passes with dedicated pick-up routes. Stress-free commute for your staff.",
     price: "MWK 45,000/mo",
     date: "Monthly Subscription",
     location: "Lagos Metropolis",
@@ -84,7 +85,7 @@ const POSTS = [
     id: "p6",
     company: "Burna Boy Live",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1459749411177-047381bb3ece?w=800&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 12890,
     caption: "The African Giant returns home. VIP tickets restocked for 48 hours only. Witness history at the biggest concert of the year.",
@@ -110,7 +111,7 @@ const POSTS = [
     id: "p8",
     company: "Coastal Express",
     avatar: "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 678,
     caption: "Scenic coastal route from Lekki to Epe. Ocean views, air-conditioned coaches, and weekend getaway packages now available.",
@@ -121,11 +122,41 @@ const POSTS = [
   },
 ];
 
+function VideoPost({
+  source,
+  isMuted,
+}: {
+  source: any;
+  isMuted: boolean;
+}) {
+  const player = useVideoPlayer(source, (player) => {
+    player.loop = true;
+    player.play();
+  });
+
+  useEffect(() => {
+    player.muted = isMuted;
+  }, [isMuted, player]);
+
+  return (
+    <VideoView
+      style={styles.media}
+      player={player}
+      contentFit="cover"
+      nativeControls={false}
+    />
+  );
+}
+
 function PostCard({ post }: { post: typeof POSTS[number] }) {
   const { colors } = useLumTheme();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const imageSource =
+    typeof post.media === "string" ? { uri: post.media } : post.media;
 
   return (
     <View
@@ -168,22 +199,27 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
 
       {/* Media */}
       <View style={styles.mediaWrap}>
-        <Image
-          source={{ uri: post.media }}
-          style={styles.media}
-          resizeMode="cover"
-        />
+        {post.isVideo ? (
+          <VideoPost source={imageSource} isMuted={isMuted} />
+        ) : (
+          <Image
+            source={imageSource}
+            style={styles.media}
+            resizeMode="cover"
+          />
+        )}
+
         {post.isVideo && (
-          <View style={styles.playOverlay}>
-            <View
-              style={[
-                styles.playBtn,
-                { backgroundColor: colors.black + "AA" },
-              ]}
-            >
-              <Feather name="play" size={28} color={colors.white} />
-            </View>
-          </View>
+          <Pressable
+            style={[styles.muteBtn, { backgroundColor: colors.black + "AA" }]}
+            onPress={() => setIsMuted(!isMuted)}
+          >
+            <Feather
+              name={isMuted ? "volume-x" : "volume-2"}
+              size={18}
+              color={colors.white}
+            />
+          </Pressable>
         )}
       </View>
 
@@ -263,10 +299,7 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
       {/* Ticket Info Chips */}
       <View style={styles.chipRow}>
         <View
-          style={[
-            styles.chip,
-            { backgroundColor: colors.gold + "18" },
-          ]}
+          style={[styles.chip, { backgroundColor: colors.gold + "18" }]}
         >
           <Feather name="tag" size={12} color={colors.gold} />
           <Text
@@ -278,12 +311,7 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
             {post.price}
           </Text>
         </View>
-        <View
-          style={[
-            styles.chip,
-            { backgroundColor: colors.bgAlt },
-          ]}
-        >
+        <View style={[styles.chip, { backgroundColor: colors.bgAlt }]}>
           <Feather name="calendar" size={12} color={colors.inkMuted} />
           <Text
             style={[
@@ -312,12 +340,7 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
       </View>
 
       {/* CTA */}
-      <Pressable
-        style={[
-          styles.ctaBtn,
-          { backgroundColor: colors.gold },
-        ]}
-      >
+      <Pressable style={[styles.ctaBtn, { backgroundColor: colors.gold }]}>
         <Feather name="tag" size={16} color={colors.white} />
         <Text
           style={[
@@ -517,22 +540,15 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  playOverlay: {
+  muteBtn: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  playBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    bottom: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    paddingLeft: 4,
   },
   actionBar: {
     flexDirection: "row",

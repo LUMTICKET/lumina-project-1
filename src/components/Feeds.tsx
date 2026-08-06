@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Platform,
   Pressable,
@@ -122,40 +123,92 @@ const POSTS = [
   },
 ];
 
-function VideoPost({
-  source,
-  isMuted,
-}: {
-  source: any;
-  isMuted: boolean;
-}) {
+/* ------------------------------------------------------------------ */
+// Video player
+/* ------------------------------------------------------------------ */
+function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
+  const [isReady, setIsReady] = useState(false);
+
   const player = useVideoPlayer(source, (player) => {
     player.loop = true;
-    player.play();
   });
 
   useEffect(() => {
-    player.muted = isMuted;
+    if (player) player.muted = isMuted;
   }, [isMuted, player]);
 
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      const uri = typeof source === "string" ? source : source?.uri;
+      if (uri) fetch(uri).catch(() => {});
+    }
+  }, [source]);
+
+  useEffect(() => {
+    if (!player) return;
+
+    if (player.status === "readyToPlay" || player.status === "playing") {
+      setIsReady(true);
+      if (!player.playing) player.play();
+      return;
+    }
+
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const handleStatusChange = ({ status }: { status: string }) => {
+      if (status === "readyToPlay" || status === "playing") {
+        setIsReady(true);
+        if (!player.playing) player.play();
+      }
+    };
+
+    if (typeof player.addListener === "function") {
+      const sub = player.addListener("statusChange", handleStatusChange);
+      return () => sub?.remove?.();
+    }
+
+    interval = setInterval(() => {
+      if (player.status === "readyToPlay" || player.status === "playing") {
+        setIsReady(true);
+        if (!player.playing) player.play();
+        if (interval) clearInterval(interval);
+      }
+    }, 300);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [player]);
+
   return (
-    <VideoView
-      style={styles.media}
-      player={player}
-      contentFit="cover"
-      nativeControls={false}
-    />
+    <View style={StyleSheet.absoluteFill}>
+      <VideoView
+        style={StyleSheet.absoluteFill}
+        player={player}
+        contentFit="cover"
+        nativeControls={false}
+        allowsFullscreen={false}
+      />
+      {!isReady && (
+        <View style={[StyleSheet.absoluteFill, styles.videoLoading]}>
+          <ActivityIndicator color="#fff" />
+        </View>
+      )}
+    </View>
   );
 }
 
-function PostCard({ post }: { post: typeof POSTS[number] }) {
+/* ------------------------------------------------------------------ */
+// Post card
+/* ------------------------------------------------------------------ */
+function PostCard({ post }: { post: (typeof POSTS)[number] }) {
   const { colors } = useLumTheme();
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
-  const imageSource =
+  const mediaSource =
     typeof post.media === "string" ? { uri: post.media } : post.media;
 
   return (
@@ -200,10 +253,10 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
       {/* Media */}
       <View style={styles.mediaWrap}>
         {post.isVideo ? (
-          <VideoPost source={imageSource} isMuted={isMuted} />
+          <VideoPost source={mediaSource} isMuted={isMuted} />
         ) : (
           <Image
-            source={imageSource}
+            source={mediaSource}
             style={styles.media}
             resizeMode="cover"
           />
@@ -298,9 +351,7 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
 
       {/* Ticket Info Chips */}
       <View style={styles.chipRow}>
-        <View
-          style={[styles.chip, { backgroundColor: colors.gold + "18" }]}
-        >
+        <View style={[styles.chip, { backgroundColor: colors.gold + "18" }]}>
           <Feather name="tag" size={12} color={colors.gold} />
           <Text
             style={[
@@ -355,6 +406,9 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
   );
 }
 
+/* ------------------------------------------------------------------ */
+// Main screen
+/* ------------------------------------------------------------------ */
 export default function Feeds() {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
@@ -377,6 +431,7 @@ export default function Feeds() {
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
+      {/* Search header */}
       <View
         style={[
           styles.searchWrap,
@@ -394,40 +449,84 @@ export default function Feeds() {
           },
         ]}
       >
-        <View
-          style={[
-            styles.searchBar,
-            {
-              backgroundColor: colors.bgAlt,
-              borderColor: colors.border,
-            },
-            isDesktop && {
-              maxWidth: 480,
-              alignSelf: "center",
-              width: "100%",
-            },
-          ]}
-        >
-          <Feather name="search" size={20} color={colors.inkMuted} />
-          <TextInput
-            placeholder="Search feeds"
-            placeholderTextColor={colors.inkMuted}
-            value={query}
-            onChangeText={setQuery}
+        {/* Mobile: plain plus icon above search, RIGHT aligned */}
+        {!isDesktop && (
+          <View style={styles.mobileTopRow}>
+            <Pressable style={styles.plusBtnMobile}>
+              <Feather name="plus" size={24} color={colors.ink} />
+            </Pressable>
+          </View>
+        )}
+
+        {/* Desktop: search + plus icon in one row */}
+        {isDesktop ? (
+          <View style={styles.desktopSearchRow}>
+            <View
+              style={[
+                styles.searchBar,
+                {
+                  backgroundColor: colors.bgAlt,
+                  borderColor: colors.border,
+                  flex: 1,
+                },
+              ]}
+            >
+              <Feather name="search" size={20} color={colors.inkMuted} />
+              <TextInput
+                placeholder="Search feeds"
+                placeholderTextColor={colors.inkMuted}
+                value={query}
+                onChangeText={setQuery}
+                style={[
+                  styles.searchInput,
+                  {
+                    color: colors.ink,
+                    fontFamily: fontFamilies.body,
+                  },
+                ]}
+              />
+              {query.length > 0 && (
+                <Pressable onPress={() => setQuery("")}>
+                  <Feather name="x" size={20} color={colors.inkMuted} />
+                </Pressable>
+              )}
+            </View>
+
+            <Pressable style={styles.plusBtnDesktop}>
+              <Feather name="plus" size={24} color={colors.ink} />
+            </Pressable>
+          </View>
+        ) : (
+          <View
             style={[
-              styles.searchInput,
+              styles.searchBar,
               {
-                color: colors.ink,
-                fontFamily: fontFamilies.body,
+                backgroundColor: colors.bgAlt,
+                borderColor: colors.border,
               },
             ]}
-          />
-          {query.length > 0 && (
-            <Pressable onPress={() => setQuery("")}>
-              <Feather name="x" size={20} color={colors.inkMuted} />
-            </Pressable>
-          )}
-        </View>
+          >
+            <Feather name="search" size={20} color={colors.inkMuted} />
+            <TextInput
+              placeholder="Search feeds"
+              placeholderTextColor={colors.inkMuted}
+              value={query}
+              onChangeText={setQuery}
+              style={[
+                styles.searchInput,
+                {
+                  color: colors.ink,
+                  fontFamily: fontFamilies.body,
+                },
+              ]}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => setQuery("")}>
+                <Feather name="x" size={20} color={colors.inkMuted} />
+              </Pressable>
+            )}
+          </View>
+        )}
       </View>
 
       <ScrollView
@@ -465,16 +564,40 @@ export default function Feeds() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+// Styles
+/* ------------------------------------------------------------------ */
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     width: "100%",
+    position: "relative",
   },
   searchWrap: {
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(2),
     borderBottomWidth: 1,
     marginTop: Platform.OS === "web" ? 0 : 40,
+  },
+  mobileTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: spacing(2),
+  },
+  plusBtnMobile: {
+    padding: spacing(1),
+  },
+  desktopSearchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(3),
+    maxWidth: 560,
+    alignSelf: "center",
+    width: "100%",
+  },
+  plusBtnDesktop: {
+    padding: spacing(1.5),
   },
   searchBar: {
     width: "100%",
@@ -535,10 +658,17 @@ const styles = StyleSheet.create({
     position: "relative",
     width: "100%",
     aspectRatio: 1,
+    overflow: "hidden",
+    backgroundColor: "#000",
   },
   media: {
     width: "100%",
     height: "100%",
+  },
+  videoLoading: {
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   muteBtn: {
     position: "absolute",

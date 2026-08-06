@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { useState } from "react";
 import {
   Image,
   Platform,
@@ -10,21 +11,15 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useState } from "react";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 
 const CATEGORIES = [
-  "All",
-  "Events",
-  "Buses",
-  "Courier",
-  "Tickets",
-  "Festivals",
-  "Tours",
-  "Sports",
-  "Concerts",
-  "Workshops",
+  "Popular Tickets",
+  "Bus Tickets",
+  "Events Tickets",
+  "Tourism Tickets",
+  "Flight Tickets",
 ];
 
 const RESULTS = [

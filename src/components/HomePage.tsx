@@ -1,7 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -14,150 +13,86 @@ import {
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 
+import BusTickets from "./BusTickets";
+import EventsTickets from "./EventsTickets";
+import FlightTickets from "./FlightTickets";
+import PopularTickets from "./PopularTickets";
+import PaymentPage from "./PaymentPage";
+import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
+import TourismTickets from "./TourismTickets";
+
 const CATEGORIES = [
-  "All",
-  "Events",
-  "Travel",
-  "Food",
-  "DIY",
-  "Home",
-  "Fashion",
-  "Art",
-  "Quotes",
-  "Music",
-  "Fitness",
-  "Tech",
+  "Popular Tickets",
+  "Bus Tickets",
+  "Events Tickets",
+  "Tourism Tickets",
+  "Flight Tickets",
 ];
 
-const PINS = [
-  {
-    id: "1",
-    title: "Night Garden Fest",
-    subtitle: "Flashback event coverage",
-    image: require("@/assets/images/event1.jpg"),
-    height: 320,
-  },
-  {
-    id: "2",
-    title: "Airport Express",
-    subtitle: "Coach and bus booking",
-    image: require("@/assets/images/malawi_airlines.jpg"),
-    height: 240,
-  },
-  {
-    id: "3",
-    title: "Courier Route",
-    subtitle: "Delivery progress tracking",
-    image: require("@/assets/images/courier_4.jpg"),
-    height: 380,
-  },
-  {
-    id: "4",
-    title: "Football Games",
-    subtitle: "Booked tickets and curated plans",
-    image: require("@/assets/images/event3.jpg"),
-    height: 260,
-  },
-  {
-    id: "5",
-    title: "City Loop",
-    subtitle: "Multiple stops, one journey",
-    image: require("@/assets/images/bus3.jpg"),
-    height: 300,
-  },
-  {
-    id: "6",
-    title: "On Time Delivery",
-    subtitle: "Tracking every checkpoint",
-    image: require("@/assets/images/event1.jpg"),
-    height: 220,
-  },
-  {
-    id: "7",
-    title: "Sunset Concert",
-    subtitle: "Live music under the stars",
-    image: require("@/assets/images/event6.jpg"),
-    height: 340,
-  },
-  {
-    id: "8",
-    title: "Urban Bus Tour",
-    subtitle: "See the city in comfort",
-    image: require("@/assets/images/event1.jpg"),
-    height: 200,
-  },
-  {
-    id: "9",
-    title: "Malawi Airlines",
-    subtitle: "fly like a bird",
-    image: require("@/assets/images/malawi_airlines2.jpg"),
-    height: 280,
-  },
-  {
-    id: "10",
-    title: "Food Festival",
-    subtitle: "Taste the world",
-    image: require("@/assets/images/event2.jpg"),
-    height: 360,
-  },
-  {
-    id: "11",
-    title: "Mountain Hike",
-    subtitle: "Guided trail adventures",
-    image: require("@/assets/images/event4.jpg"),
-    height: 250,
-  },
-  {
-    id: "12",
-    title: "Theatre Night",
-    subtitle: "Drama and performances",
-    image: require("@/assets/images/bus1.jpg"),
-    height: 310,
-  },
-  {
-    id: "13",
-    title: "Express Lane",
-    subtitle: "Fast-track bus passes",
-    image: require("@/assets/images/event2.jpg"),
-    height: 190,
-  },
-  {
-    id: "14",
-    title: "Gift Box",
-    subtitle: "Premium courier packaging",
-    image: require("@/assets/images/courier_3.jpg"),
-    height: 290,
-  },
-  {
-    id: "15",
-    title: "Jazz Club",
-    subtitle: "Intimate live sessions",
-    image: require("@/assets/images/event1.jpg"),
-    height: 330,
-  },
-  {
-    id: "16",
-    title: "Coastal Route",
-    subtitle: "Scenic bus journeys",
-    image: require("@/assets/images/event1.jpg"),
-    height: 270,
-  },
-  {
-    id: "17",
-    title: "Art Workshop",
-    subtitle: "Create and inspire",
-    image: require("@/assets/images/event1.jpg"),
-    height: 350,
-  },
-  {
-    id: "18",
-    title: "Night Market",
-    subtitle: "Street food and crafts",
-    image: require("@/assets/images/event1.jpg"),
-    height: 230,
-  },
-];
+/* ------------------------------------------------------------------ */
+// Category tabs
+/* ------------------------------------------------------------------ */
+function CategoryTabs({
+  categories,
+  selectedIndex,
+  onSelect,
+}: {
+  categories: string[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const { colors } = useLumTheme();
 
+  return (
+    <View
+      style={[
+        styles.pillsWrapper,
+        {
+          backgroundColor: colors.bg,
+          borderBottomColor: colors.border,
+        },
+      ]}
+    >
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.pillsContent}
+      >
+        {categories.map((cat, index) => {
+          const isSelected = index === selectedIndex;
+          return (
+            <Pressable
+              key={cat}
+              onPress={() => onSelect(index)}
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: isSelected ? colors.gold : colors.bgAlt,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.pillText,
+                  {
+                    color: isSelected ? colors.black : colors.ink,
+                    fontFamily: fontFamilies.bodySemi,
+                  },
+                ]}
+              >
+                {cat}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+// Home page
+/* ------------------------------------------------------------------ */
 interface HomePageProps {
   onOpenAuth?: () => void;
   onOpenSettings?: () => void;
@@ -168,24 +103,83 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
 
-  let columnCount = 2;
-  if (width >= 1400) columnCount = 6;
-  else if (width >= 1100) columnCount = 5;
-  else if (width >= 768) columnCount = 3;
-
-  const columns: Array<typeof PINS> = Array.from({ length: columnCount }, () => []);
-  PINS.forEach((pin, index) => {
-    columns[index % columnCount].push(pin);
-  });
-
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
 
+  /** Full-screen ticket purchase flow (config → payment) — hides tabs/search */
+  const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
+  const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
+
+  /** Standalone category view (no tabs, category handles its own list→config→payment) */
+  const [standaloneCategory, setStandaloneCategory] = useState<number | null>(null);
+
   const iconOffset = Platform.OS !== "web" ? { marginTop: 20 } : {};
+
+  /* ---------- Standalone category (self-contained, no tabs) ---------- */
+  if (standaloneCategory !== null) {
+    const handleBackFromStandalone = () => setStandaloneCategory(null);
+    switch (standaloneCategory) {
+      case 0:
+        return <PopularTickets onBack={handleBackFromStandalone} />;
+      case 1:
+        return <BusTickets onBack={handleBackFromStandalone} />;
+      case 2:
+        return <EventsTickets onBack={handleBackFromStandalone} />;
+      case 3:
+        return <TourismTickets onBack={handleBackFromStandalone} />;
+      case 4:
+        return <FlightTickets onBack={handleBackFromStandalone} />;
+      default:
+        setStandaloneCategory(null);
+    }
+  }
+
+  /* ---------- Full-screen Payment ---------- */
+  if (purchasePayload) {
+    return (
+      <PaymentPage
+        payload={purchasePayload}
+        onClose={() => setPurchasePayload(null)}           // back to config
+        onComplete={() => {                                // done, back to list
+          setPurchasePayload(null);
+          setSelectedTicket(null);
+        }}
+      />
+    );
+  }
+
+  /* ---------- Full-screen Ticket Config ---------- */
+  if (selectedTicket) {
+    return (
+      <TicketConfigPage
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onNavigateToPayment={setPurchasePayload}
+      />
+    );
+  }
+
+  /* ---------- Normal tabbed view ---------- */
+  const renderCategoryPage = () => {
+    switch (selectedCategory) {
+      case 0:
+        return <PopularTickets onSelectTicket={setSelectedTicket} />;
+      case 1:
+        return <BusTickets onSelectTicket={setSelectedTicket} />;
+      case 2:
+        return <EventsTickets onSelectTicket={setSelectedTicket} />;
+      case 3:
+        return <TourismTickets onSelectTicket={setSelectedTicket} />;
+      case 4:
+        return <FlightTickets onSelectTicket={setSelectedTicket} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-      {/* Top bar: Search + Profile */}
+      {/* Desktop top bar */}
       {isDesktop && (
         <View
           style={[
@@ -225,10 +219,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
             </View>
 
             <Pressable
-              style={[
-                styles.profilePoint,
-                { backgroundColor: colors.bgAlt },
-              ]}
+              style={[styles.profilePoint, { backgroundColor: colors.bgAlt }]}
               onPress={() => onOpenAuth?.()}
             >
               <Feather name="user" size={20} color={colors.ink} />
@@ -239,7 +230,12 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
 
       {/* Mobile search */}
       {!isDesktop && (
-        <View style={[styles.mobileSearchWrap, { paddingHorizontal: spacing(3), paddingTop: spacing(3) }]}>
+        <View
+          style={[
+            styles.mobileSearchWrap,
+            { paddingHorizontal: spacing(3), paddingTop: spacing(3) },
+          ]}
+        >
           <View style={styles.mobileActionRow}>
             <Pressable
               style={[
@@ -289,140 +285,22 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
         </View>
       )}
 
-      {/* Category Pills */}
-      <View
-        style={[
-          styles.pillsWrapper,
-          {
-            backgroundColor: colors.bg,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.pillsContent}
-        >
-          {CATEGORIES.map((cat, index) => {
-            const isSelected = index === selectedCategory;
-            return (
-              <Pressable
-                key={cat}
-                onPress={() => setSelectedCategory(index)}
-                style={[
-                  styles.pill,
-                  {
-                    backgroundColor: isSelected ? colors.gold : colors.bgAlt,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.pillText,
-                    {
-                      color: isSelected ? colors.black : colors.ink,
-                      fontFamily: fontFamilies.bodySemi,
-                    },
-                  ]}
-                >
-                  {cat}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      {/* Category tabs */}
+      <CategoryTabs
+        categories={CATEGORIES}
+        selectedIndex={selectedCategory}
+        onSelect={setSelectedCategory}
+      />
 
-      {/* Masonry Grid */}
-      <View
-        style={[
-          styles.board,
-          {
-            paddingHorizontal: isDesktop ? spacing(6) : spacing(2),
-            paddingTop: spacing(4),
-            paddingBottom: isDesktop ? spacing(10) : spacing(20),
-          },
-        ]}
-      >
-        {columns.map((column, colIndex) => (
-          <View key={`col-${colIndex}`} style={styles.column}>
-            {column.map((pin) => (
-              <Pressable key={pin.id} style={styles.pinWrap}>
-                <View
-                  style={[
-                    styles.pinCard,
-                    {
-                      backgroundColor: colors.surface,
-                      shadowColor: colors.shadow,
-                    },
-                  ]}
-                >
-                  <View style={styles.imageWrap}>
-                    <Image
-                      source={pin.image}
-                      style={[styles.pinImage, { height: pin.height }]}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.saveOverlay}>
-                      <Pressable
-                        style={[
-                          styles.saveBtn,
-                          { backgroundColor: colors.gold },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.saveText,
-                            {
-                              color: colors.white,
-                              fontFamily: fontFamilies.bodySemi,
-                            },
-                          ]}
-                        >
-                          Save
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                  <View style={styles.pinBody}>
-                    <Text
-                      style={[
-                        styles.pinTitle,
-                        {
-                          color: colors.ink,
-                          fontFamily: fontFamilies.display,
-                        },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {pin.title}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.pinSubtitle,
-                        {
-                          color: colors.inkMuted,
-                          fontFamily: fontFamilies.body,
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {pin.subtitle}
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        ))}
-      </View>
+      {/* Active category page */}
+      <View style={{ flex: 1 }}>{renderCategoryPage()}</View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
+    flex: 1,
     width: "100%",
   },
   topBar: {
@@ -500,72 +378,5 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontSize: 14,
-  },
-  board: {
-    flexDirection: "row",
-    gap: spacing(3),
-    alignItems: "flex-start",
-    maxWidth: 1600,
-    alignSelf: "center",
-    width: "100%",
-  },
-  column: {
-    flex: 1,
-    gap: spacing(3),
-  },
-  pinWrap: {
-    width: "100%",
-    marginBottom: spacing(3),
-  },
-  pinCard: {
-    borderRadius: radii.xl,
-    overflow: "hidden",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-  imageWrap: {
-    position: "relative",
-    width: "100%",
-  },
-  pinImage: {
-    width: "100%",
-    borderBottomWidth: 1,
-  },
-  saveOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    padding: spacing(3),
-  },
-  saveBtn: {
-    paddingHorizontal: spacing(4),
-    paddingVertical: spacing(2),
-    borderRadius: radii.full,
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
-  },
-  saveText: {
-    fontSize: 13,
-  },
-  pinBody: {
-    paddingHorizontal: spacing(3),
-    paddingTop: spacing(3),
-    paddingBottom: spacing(3.5),
-    gap: 4,
-  },
-  pinTitle: {
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  pinSubtitle: {
-    fontSize: 12,
   },
 });

@@ -8,7 +8,7 @@ import {
   Text,
   TextInput,
   useWindowDimensions,
-  View
+  View,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
@@ -17,6 +17,7 @@ import BusTickets from "./BusTickets";
 import EventsTickets from "./EventsTickets";
 import FlightTickets from "./FlightTickets";
 import PopularTickets from "./PopularTickets";
+import TicketConfigPage, { TicketConfig } from "./TicketConfigPage";
 import TourismTickets from "./TourismTickets";
 
 const CATEGORIES = [
@@ -103,21 +104,36 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
 
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
 
   const iconOffset = Platform.OS !== "web" ? { marginTop: 20 } : {};
+
+  // Display standalone configuration page if a ticket is selected
+  if (selectedTicket) {
+    return (
+      <TicketConfigPage
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onPurchase={(payload) => {
+          console.log("Purchase complete:", payload);
+          setSelectedTicket(null);
+        }}
+      />
+    );
+  }
 
   const renderCategoryPage = () => {
     switch (selectedCategory) {
       case 0:
-        return <PopularTickets />;
+        return <PopularTickets onSelectTicket={setSelectedTicket} />;
       case 1:
-        return <BusTickets />;
+        return <BusTickets onSelectTicket={setSelectedTicket} />;
       case 2:
-        return <EventsTickets />;
+        return <EventsTickets onSelectTicket={setSelectedTicket} />;
       case 3:
-        return <TourismTickets />;
+        return <TourismTickets onSelectTicket={setSelectedTicket} />;
       case 4:
-        return <FlightTickets />;
+        return <FlightTickets onSelectTicket={setSelectedTicket} />;
       default:
         return null;
     }
@@ -306,7 +322,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: spacing(2),
-    
   },
   pillsWrapper: {
     borderBottomWidth: 1,

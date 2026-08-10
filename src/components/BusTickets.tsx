@@ -10,8 +10,12 @@ import {
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
-import TicketConfigPage, { TicketConfig } from "./TicketConfigPage";
+import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
+import PaymentPage from "./PaymentPage";
 
+/* ------------------------------------------------------------------ */
+// Data
+/* ------------------------------------------------------------------ */
 const ITEMS: TicketConfig[] = [
   {
     id: "bus-1",
@@ -63,22 +67,74 @@ const ITEMS: TicketConfig[] = [
   },
 ];
 
+/* ------------------------------------------------------------------ */
+// Flow
+/* ------------------------------------------------------------------ */
+type Screen = "list" | "config" | "payment";
+
 export default function BusTickets() {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
-  const [activeTicket, setActiveTicket] = useState<TicketConfig | null>(null);
 
-  if (activeTicket) {
+  const [screen, setScreen] = useState<Screen>("list");
+  const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
+  const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
+
+  // 1. List → Config
+  const handleSelectTicket = (ticket: TicketConfig) => {
+    setSelectedTicket(ticket);
+    setScreen("config");
+  };
+
+  // 2. Config → Payment
+  const handleNavigateToPayment = (payload: PurchasePayload) => {
+    setPurchasePayload(payload);
+    setScreen("payment");
+  };
+
+  // 3. Payment back → Config
+  const handlePaymentClose = () => {
+    setScreen("config");
+  };
+
+  // 4. Payment done → List
+  const handlePaymentComplete = (result: { success: boolean; method: string; reference?: string }) => {
+    console.log("Payment result:", result);
+    setScreen("list");
+    setSelectedTicket(null);
+    setPurchasePayload(null);
+  };
+
+  // 5. Config back → List
+  const handleConfigClose = () => {
+    setScreen("list");
+    setSelectedTicket(null);
+  };
+
+  /* ---------------- RENDER: Ticket Config ---------------- */
+  if (screen === "config" && selectedTicket) {
     return (
       <TicketConfigPage
-        ticket={activeTicket}
-        onClose={() => setActiveTicket(null)}
-        onPurchase={(p) => { console.log(p); setActiveTicket(null); }}
+        ticket={selectedTicket}
+        onClose={handleConfigClose}
+        onNavigateToPayment={handleNavigateToPayment}
       />
     );
   }
 
+  /* ---------------- RENDER: Payment ---------------- */
+  if (screen === "payment" && purchasePayload) {
+    return (
+      <PaymentPage
+        payload={purchasePayload}
+        onClose={handlePaymentClose}
+        onComplete={handlePaymentComplete}
+      />
+    );
+  }
+
+  /* ---------------- RENDER: List (default) ---------------- */
   let columnCount = 2;
   if (width >= 1400) columnCount = 6;
   else if (width >= 1100) columnCount = 5;
@@ -100,19 +156,32 @@ export default function BusTickets() {
         {columns.map((col, ci) => (
           <View key={ci} style={styles.column}>
             {col.map((pin) => (
-              <Pressable key={pin.id} style={styles.pinWrap} onPress={() => setActiveTicket(pin)}>
+              <Pressable
+                key={pin.id}
+                style={styles.pinWrap}
+                onPress={() => handleSelectTicket(pin)}
+              >
                 <View style={[styles.pinCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
                   <View style={styles.imageWrap}>
                     <Image source={pin.image} style={[styles.pinImage, { height: 280 }]} resizeMode="cover" />
                     <View style={styles.saveOverlay}>
-                      <Pressable style={[styles.saveBtn, { backgroundColor: colors.gold }]}>
-                        <Text style={[styles.saveText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>Book Seat</Text>
+                      <Pressable
+                        style={[styles.saveBtn, { backgroundColor: colors.gold }]}
+                        onPress={() => handleSelectTicket(pin)}
+                      >
+                        <Text style={[styles.saveText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>
+                          Book Seat
+                        </Text>
                       </Pressable>
                     </View>
                   </View>
                   <View style={styles.pinBody}>
-                    <Text style={[styles.pinTitle, { color: colors.ink, fontFamily: fontFamilies.display }]} numberOfLines={2}>{pin.title}</Text>
-                    <Text style={[styles.pinSubtitle, { color: colors.inkMuted, fontFamily: fontFamilies.body }]} numberOfLines={1}>{pin.subtitle}</Text>
+                    <Text style={[styles.pinTitle, { color: colors.ink, fontFamily: fontFamilies.display }]} numberOfLines={2}>
+                      {pin.title}
+                    </Text>
+                    <Text style={[styles.pinSubtitle, { color: colors.inkMuted, fontFamily: fontFamilies.body }]} numberOfLines={1}>
+                      {pin.subtitle}
+                    </Text>
                     {pin.route && (
                       <Text style={[styles.routeMini, { color: colors.inkMuted }]}>
                         {pin.route.from} → {pin.route.to}

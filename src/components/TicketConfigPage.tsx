@@ -1,24 +1,24 @@
 import { Feather } from "@expo/vector-icons";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Easing,
   Image,
   Platform,
   Pressable,
+  Animated as RNAnimated,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   useWindowDimensions,
   View,
-  Animated as RNAnimated,
-  Easing,
 } from "react-native";
 import Svg, {
-  Path,
   Circle,
   G,
-  Text as SvgText,
+  Path,
   Rect,
+  Text as SvgText,
 } from "react-native-svg";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
@@ -63,6 +63,18 @@ export interface TicketConfig {
   tags: string[];
   maxPerUser: number;
   slotExpiryMinutes?: number;
+}
+
+export interface PurchasePayload {
+  ticketId: string;
+  tierId: string;
+  quantity: number;
+  mode: "instant" | "slot";
+  slotExpiry?: number;
+  totalPrice: number;
+  currency: string;
+  ticketTitle: string;
+  tierName: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -157,24 +169,22 @@ function RouteAnimation({
   const isFlight = category === "flight";
   const showAnimation = isBus || isFlight;
 
-  if (!showAnimation || !route) {
-    return null;
-  }
-
-  const containerW = Math.min(width - spacing(8), 480);
-  const pad = 44;
-  const h = 110;
-  const startX = pad;
-  const endX = containerW - pad;
-  const midY = h / 2;
-
-  // Arc path — bus dips down, flight arcs up
-  const controlY = isFlight ? midY - 30 : midY + 18;
-  const pathD = `M ${startX} ${midY} Q ${(startX + endX) / 2} ${controlY} ${endX} ${midY}`;
-
   const busProgress = useRef(new RNAnimated.Value(0)).current;
+  const pulseA = useRef(new RNAnimated.Value(1)).current;
+  const pulseB = useRef(new RNAnimated.Value(1)).current;
+
+  const radiusA = pulseA.interpolate({
+    inputRange: [1, 1.6],
+    outputRange: [14, 22.4],
+  });
+  const radiusB = pulseB.interpolate({
+    inputRange: [1, 1.6],
+    outputRange: [14, 22.4],
+  });
 
   useEffect(() => {
+    if (!showAnimation || !route) return;
+
     const anim = RNAnimated.loop(
       RNAnimated.sequence([
         RNAnimated.timing(busProgress, {
@@ -193,14 +203,7 @@ function RouteAnimation({
         RNAnimated.delay(600),
       ])
     );
-    anim.start();
-    return () => anim.stop();
-  }, []);
 
-  const pulseA = useRef(new RNAnimated.Value(1)).current;
-  const pulseB = useRef(new RNAnimated.Value(1)).current;
-
-  useEffect(() => {
     const a = RNAnimated.loop(
       RNAnimated.sequence([
         RNAnimated.timing(pulseA, {
@@ -234,13 +237,31 @@ function RouteAnimation({
         }),
       ])
     );
+
+    anim.start();
     a.start();
     b.start();
+
     return () => {
+      anim.stop();
       a.stop();
       b.stop();
     };
-  }, []);
+  }, [showAnimation, route]);
+
+  if (!showAnimation || !route) {
+    return null;
+  }
+
+  const containerW = Math.min(width - spacing(8), 480);
+  const pad = 44;
+  const h = 110;
+  const startX = pad;
+  const endX = containerW - pad;
+  const midY = h / 2;
+
+  const controlY = isFlight ? midY - 30 : midY + 18;
+  const pathD = `M ${startX} ${midY} Q ${(startX + endX) / 2} ${controlY} ${endX} ${midY}`;
 
   const busX = busProgress.interpolate({
     inputRange: [0, 1],
@@ -251,7 +272,6 @@ function RouteAnimation({
     outputRange: [midY, controlY + (isFlight ? 8 : -6), midY],
   });
 
-  // Rotate icon based on direction
   const rotate = busProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [isFlight ? "-15deg" : "0deg", isFlight ? "15deg" : "0deg"],
@@ -275,7 +295,6 @@ function RouteAnimation({
         }}
       >
         <Svg width={containerW} height={h + 44}>
-          {/* Background track */}
           <Path
             d={pathD}
             stroke={colors.border}
@@ -283,7 +302,6 @@ function RouteAnimation({
             fill="none"
             strokeLinecap="round"
           />
-          {/* Active dashed track */}
           <Path
             d={pathD}
             stroke={colors.gold}
@@ -294,11 +312,10 @@ function RouteAnimation({
             opacity={0.5}
           />
 
-          {/* Point A pulse */}
           <AnimatedCircle
             cx={startX}
             cy={midY}
-            r={RNAnimated.multiply(pulseA, 14)}
+            r={radiusA as any}
             fill={colors.gold}
             opacity={0.12}
           />
@@ -321,11 +338,10 @@ function RouteAnimation({
             {fromLabel}
           </SvgText>
 
-          {/* Point B pulse */}
           <AnimatedCircle
             cx={endX}
             cy={midY}
-            r={RNAnimated.multiply(pulseB, 14)}
+            r={radiusB as any}
             fill={colors.gold}
             opacity={0.12}
           />
@@ -348,7 +364,6 @@ function RouteAnimation({
             {toLabel}
           </SvgText>
 
-          {/* Duration label at arc peak */}
           {route.duration && (
             <G>
               <Rect
@@ -376,7 +391,6 @@ function RouteAnimation({
           )}
         </Svg>
 
-        {/* Moving vehicle — positioned absolutely over the SVG */}
         <RNAnimated.View
           style={{
             position: "absolute",
@@ -606,18 +620,13 @@ function RouteChip({ route }: { route: RouteInfo }) {
 interface TicketConfigPageProps {
   ticket: TicketConfig;
   onClose?: () => void;
-  onPurchase?: (payload: {
-    ticketId: string;
-    tierId: string;
-    quantity: number;
-    mode: "instant" | "slot";
-    slotExpiry?: number;
-  }) => void;
+  onPurchase?: (payload: PurchasePayload) => void;
+  onNavigateToPayment?: (payload: PurchasePayload) => void;
 }
 
-export default function TicketConfigPage({ ticket, onClose, onPurchase }: TicketConfigPageProps) {
+export default function TicketConfigPage({ ticket, onClose, onPurchase, onNavigateToPayment }: TicketConfigPageProps) {
   const { colors } = useLumTheme();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
   const isTablet = width >= 768 && width < 900;
 
@@ -651,16 +660,22 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase }: Ticket
       reserve();
       return;
     }
-    onPurchase?.({
+
+    const payload: PurchasePayload = {
       ticketId: ticket.id,
       tierId: selectedTierId || "",
       quantity,
       mode: purchaseMode,
       slotExpiry: slot?.expiresAt,
-    });
+      totalPrice,
+      currency,
+      ticketTitle: ticket.title,
+      tierName: selectedTier?.name || "",
+    };
+
+    onNavigateToPayment?.(payload);
   };
 
-  // ── Shared Content ──
   const ContentCard = useCallback(
     () => (
       <View
@@ -770,7 +785,6 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase }: Ticket
               </View>
             </View>
 
-            {/* Bus/Flight: animated route. Event/Tourism: location details */}
             {showRouteAnimation && ticket.route && (
               <RouteAnimation route={ticket.route} category={ticket.category} />
             )}
@@ -1114,7 +1128,6 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase }: Ticket
     ]
   );
 
-  // ── Desktop / Tablet ──
   if (isDesktop || isTablet) {
     return (
       <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
@@ -1158,7 +1171,6 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase }: Ticket
     );
   }
 
-  // ── Mobile ──
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
       <View
@@ -1221,7 +1233,6 @@ const styles = StyleSheet.create({
   contentCard: { flex: 1, overflow: "hidden" },
   scrollContent: { flexGrow: 1 },
 
-  /* Framed hero image */
   heroFrame: {
     paddingHorizontal: spacing(4),
     paddingTop: spacing(4),

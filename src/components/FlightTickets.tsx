@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   Image,
   Pressable,
@@ -10,7 +9,7 @@ import {
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
-import TicketConfigPage, { TicketConfig } from "./TicketConfigPage";
+import { TicketConfig } from "./TicketConfigPage";
 
 const ITEMS: TicketConfig[] = [
   {
@@ -61,21 +60,14 @@ const ITEMS: TicketConfig[] = [
   },
 ];
 
-export default function FlightTickets() {
+interface FlightTicketsProps {
+  onSelectTicket: (ticket: TicketConfig) => void;
+}
+
+export default function FlightTickets({ onSelectTicket }: FlightTicketsProps) {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
-  const [activeTicket, setActiveTicket] = useState<TicketConfig | null>(null);
-
-  if (activeTicket) {
-    return (
-      <TicketConfigPage
-        ticket={activeTicket}
-        onClose={() => setActiveTicket(null)}
-        onPurchase={(p) => { console.log(p); setActiveTicket(null); }}
-      />
-    );
-  }
 
   let columnCount = 2;
   if (width >= 1400) columnCount = 6;
@@ -98,12 +90,15 @@ export default function FlightTickets() {
         {columns.map((col, ci) => (
           <View key={ci} style={styles.column}>
             {col.map((pin) => (
-              <Pressable key={pin.id} style={styles.pinWrap} onPress={() => setActiveTicket(pin)}>
+              <Pressable key={pin.id} style={styles.pinWrap} onPress={() => onSelectTicket(pin)}>
                 <View style={[styles.pinCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
                   <View style={styles.imageWrap}>
                     <Image source={pin.image} style={[styles.pinImage, { height: 280 }]} resizeMode="cover" />
                     <View style={styles.saveOverlay}>
-                      <Pressable style={[styles.saveBtn, { backgroundColor: colors.gold }]}>
+                      <Pressable 
+                        style={[styles.saveBtn, { backgroundColor: colors.gold }]}
+                        onPress={() => onSelectTicket(pin)}
+                      >
                         <Text style={[styles.saveText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>Book Flight</Text>
                       </Pressable>
                     </View>

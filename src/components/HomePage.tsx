@@ -17,7 +17,8 @@ import BusTickets from "./BusTickets";
 import EventsTickets from "./EventsTickets";
 import FlightTickets from "./FlightTickets";
 import PopularTickets from "./PopularTickets";
-import TicketConfigPage, { TicketConfig } from "./TicketConfigPage";
+import PaymentPage from "./PaymentPage";
+import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
 import TourismTickets from "./TourismTickets";
 
 const CATEGORIES = [
@@ -29,7 +30,7 @@ const CATEGORIES = [
 ];
 
 /* ------------------------------------------------------------------ */
-// Category tabs component
+// Category tabs
 /* ------------------------------------------------------------------ */
 function CategoryTabs({
   categories,
@@ -104,24 +105,61 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
 
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+
+  /** Full-screen ticket purchase flow (config → payment) — hides tabs/search */
   const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
+  const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
+
+  /** Standalone category view (no tabs, category handles its own list→config→payment) */
+  const [standaloneCategory, setStandaloneCategory] = useState<number | null>(null);
 
   const iconOffset = Platform.OS !== "web" ? { marginTop: 20 } : {};
 
-  // Display standalone configuration page if a ticket is selected
-  if (selectedTicket) {
+  /* ---------- Standalone category (self-contained, no tabs) ---------- */
+  if (standaloneCategory !== null) {
+    const handleBackFromStandalone = () => setStandaloneCategory(null);
+    switch (standaloneCategory) {
+      case 0:
+        return <PopularTickets onBack={handleBackFromStandalone} />;
+      case 1:
+        return <BusTickets onBack={handleBackFromStandalone} />;
+      case 2:
+        return <EventsTickets onBack={handleBackFromStandalone} />;
+      case 3:
+        return <TourismTickets onBack={handleBackFromStandalone} />;
+      case 4:
+        return <FlightTickets onBack={handleBackFromStandalone} />;
+      default:
+        setStandaloneCategory(null);
+    }
+  }
+
+  /* ---------- Full-screen Payment ---------- */
+  if (purchasePayload) {
     return (
-      <TicketConfigPage
-        ticket={selectedTicket}
-        onClose={() => setSelectedTicket(null)}
-        onPurchase={(payload) => {
-          console.log("Purchase complete:", payload);
+      <PaymentPage
+        payload={purchasePayload}
+        onClose={() => setPurchasePayload(null)}           // back to config
+        onComplete={() => {                                // done, back to list
+          setPurchasePayload(null);
           setSelectedTicket(null);
         }}
       />
     );
   }
 
+  /* ---------- Full-screen Ticket Config ---------- */
+  if (selectedTicket) {
+    return (
+      <TicketConfigPage
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onNavigateToPayment={setPurchasePayload}
+      />
+    );
+  }
+
+  /* ---------- Normal tabbed view ---------- */
   const renderCategoryPage = () => {
     switch (selectedCategory) {
       case 0:

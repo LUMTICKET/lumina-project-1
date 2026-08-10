@@ -17,7 +17,7 @@ import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 
 /* ------------------------------------------------------------------ */
-// Assets — relative from src/components/ to assets/images/
+// Assets
 /* ------------------------------------------------------------------ */
 const MPAMBA_LOGO = require("@/assets/images/tnm_mpamba.jpg");
 const AIRTEL_LOGO = require("@/assets/images/airtel-money.png");
@@ -37,7 +37,7 @@ export interface PurchasePayload {
   tierName: string;
 }
 
-type PaymentMethod = "mpamba" | "airtel" | "card";
+export type PaymentMethod = "mpamba" | "airtel" | "card";
 type PaymentStatus = "idle" | "processing" | "success" | "failed";
 
 /* ------------------------------------------------------------------ */
@@ -719,6 +719,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
+    marginTop: Platform.OS === "web" ? 0 : 40,
   },
   backBtn: {
     width: 40,

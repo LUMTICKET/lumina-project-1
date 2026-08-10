@@ -1214,7 +1214,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
-    marginTop: Platform.OS === "web" ? 0 : 0,
+    marginTop: Platform.OS === "web" ? 0 : 52,
   },
   backBtn: {
     width: 40,

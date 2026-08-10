@@ -1,5 +1,7 @@
+import { Feather } from "@expo/vector-icons";
 import {
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -61,10 +63,11 @@ const ITEMS: TicketConfig[] = [
 ];
 
 interface FlightTicketsProps {
-  onSelectTicket: (ticket: TicketConfig) => void;
+  onSelectTicket?: (ticket: TicketConfig) => void;
+  onBack?: () => void;
 }
 
-export default function FlightTickets({ onSelectTicket }: FlightTicketsProps) {
+export default function FlightTickets({ onSelectTicket, onBack }: FlightTicketsProps) {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
@@ -77,52 +80,107 @@ export default function FlightTickets({ onSelectTicket }: FlightTicketsProps) {
   const columns: Array<typeof ITEMS> = Array.from({ length: columnCount }, () => []);
   ITEMS.forEach((item, i) => columns[i % columnCount].push(item));
 
+  const showHeader = !!onBack;
+
   return (
-    <ScrollView
-      contentContainerStyle={{
-        paddingHorizontal: isDesktop ? spacing(6) : spacing(2),
-        paddingTop: spacing(4),
-        paddingBottom: isDesktop ? spacing(10) : spacing(20),
-      }}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.board}>
-        {columns.map((col, ci) => (
-          <View key={ci} style={styles.column}>
-            {col.map((pin) => (
-              <Pressable key={pin.id} style={styles.pinWrap} onPress={() => onSelectTicket(pin)}>
-                <View style={[styles.pinCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-                  <View style={styles.imageWrap}>
-                    <Image source={pin.image} style={[styles.pinImage, { height: 280 }]} resizeMode="cover" />
-                    <View style={styles.saveOverlay}>
-                      <Pressable 
-                        style={[styles.saveBtn, { backgroundColor: colors.gold }]}
-                        onPress={() => onSelectTicket(pin)}
-                      >
-                        <Text style={[styles.saveText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>Book Flight</Text>
-                      </Pressable>
+    <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
+      {showHeader && (
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.bg, borderBottomColor: colors.border },
+            Platform.OS === "web"
+              ? ({ position: "sticky", top: 0, zIndex: 50 } as any)
+              : {},
+          ]}
+        >
+          <Pressable onPress={onBack} style={styles.backBtn}>
+            <Feather name="arrow-left" size={24} color={colors.ink} />
+          </Pressable>
+          <Text
+            style={[
+              styles.headerTitle,
+              { color: colors.ink, fontFamily: fontFamilies.display },
+            ]}
+            numberOfLines={1}
+          >
+            Flight Tickets
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+      )}
+
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: isDesktop ? spacing(6) : spacing(2),
+          paddingTop: spacing(4),
+          paddingBottom: isDesktop ? spacing(10) : spacing(20),
+        }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.board}>
+          {columns.map((col, ci) => (
+            <View key={ci} style={styles.column}>
+              {col.map((pin) => (
+                <Pressable key={pin.id} style={styles.pinWrap} onPress={() => onSelectTicket?.(pin)}>
+                  <View style={[styles.pinCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
+                    <View style={styles.imageWrap}>
+                      <Image source={pin.image} style={[styles.pinImage, { height: 280 }]} resizeMode="cover" />
+                      <View style={styles.saveOverlay}>
+                        <Pressable 
+                          style={[styles.saveBtn, { backgroundColor: colors.gold }]}
+                          onPress={() => onSelectTicket?.(pin)}
+                        >
+                          <Text style={[styles.saveText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>Book Flight</Text>
+                        </Pressable>
+                      </View>
+                    </View>
+                    <View style={styles.pinBody}>
+                      <Text style={[styles.pinTitle, { color: colors.ink, fontFamily: fontFamilies.display }]} numberOfLines={2}>{pin.title}</Text>
+                      <Text style={[styles.pinSubtitle, { color: colors.inkMuted, fontFamily: fontFamilies.body }]} numberOfLines={1}>{pin.subtitle}</Text>
+                      {pin.route && (
+                        <Text style={[styles.routeMini, { color: colors.inkMuted }]}>
+                          {pin.route.from} → {pin.route.to}
+                        </Text>
+                      )}
                     </View>
                   </View>
-                  <View style={styles.pinBody}>
-                    <Text style={[styles.pinTitle, { color: colors.ink, fontFamily: fontFamilies.display }]} numberOfLines={2}>{pin.title}</Text>
-                    <Text style={[styles.pinSubtitle, { color: colors.inkMuted, fontFamily: fontFamilies.body }]} numberOfLines={1}>{pin.subtitle}</Text>
-                    {pin.route && (
-                      <Text style={[styles.routeMini, { color: colors.inkMuted }]}>
-                        {pin.route.from} → {pin.route.to}
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        ))}
-      </View>
-    </ScrollView>
+                </Pressable>
+              ))}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrap: { flex: 1, width: "100%" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing(4),
+    paddingVertical: spacing(3),
+    borderBottomWidth: 1,
+    marginTop: Platform.OS === "web" ? 0 : 52,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 16,
+    flex: 1,
+    textAlign: "center",
+    marginHorizontal: spacing(2),
+    fontFamily: fontFamilies.display,
+  },
+
   board: { flexDirection: "row", gap: spacing(3), alignItems: "flex-start", maxWidth: 1600, alignSelf: "center", width: "100%" },
   column: { flex: 1, gap: spacing(3) },
   pinWrap: { width: "100%", marginBottom: spacing(3) },

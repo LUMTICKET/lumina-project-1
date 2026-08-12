@@ -1,6 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  ActivityIndicator,
+  Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -8,7 +11,6 @@ import {
   TextInput,
   useWindowDimensions,
   View,
-  Platform,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
@@ -17,6 +19,8 @@ import { fontFamilies, radii, spacing } from "../theme/tokens";
 // Types
 /* ------------------------------------------------------------------ */
 type CategoryKey = "event" | "bus" | "flight" | "tourism";
+type CreateScreen = "form" | "checkout" | "success";
+type PaymentMethod = "tnm" | "airtel" | "card";
 
 interface TierForm {
   id: string;
@@ -39,41 +43,19 @@ interface CategoryMeta {
   label: string;
   icon: keyof typeof Feather.glyphMap;
   desc: string;
-  themeColor: string; // used as accent hint
 }
 
 /* ------------------------------------------------------------------ */
-// Category definitions
+// Config
 /* ------------------------------------------------------------------ */
+const PLATFORM_FEE = 10000;
+const CURRENCY = "MWK";
+
 const CATEGORIES: CategoryMeta[] = [
-  {
-    key: "event",
-    label: "Event",
-    icon: "calendar",
-    desc: "Concerts, sports, festivals",
-    themeColor: "#E11D48",
-  },
-  {
-    key: "bus",
-    label: "Bus Route",
-    icon: "truck",
-    desc: "Intercity & shuttle services",
-    themeColor: "#059669",
-  },
-  {
-    key: "flight",
-    label: "Flight",
-    icon: "send",
-    desc: "Domestic & international flights",
-    themeColor: "#2563EB",
-  },
-  {
-    key: "tourism",
-    label: "Tourism",
-    icon: "map",
-    desc: "Tours, parks, attractions",
-    themeColor: "#D97706",
-  },
+  { key: "event", label: "Event", icon: "calendar", desc: "Concerts, sports, festivals" },
+  { key: "bus", label: "Bus Route", icon: "truck", desc: "Intercity & shuttle services" },
+  { key: "flight", label: "Flight", icon: "send", desc: "Domestic & international flights" },
+  { key: "tourism", label: "Tourism", icon: "map", desc: "Tours, parks, attractions" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -84,14 +66,19 @@ function makeId() {
 }
 
 /* ------------------------------------------------------------------ */
-// Component
+// Main Component
 /* ------------------------------------------------------------------ */
 export default function Create() {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
 
-  /* ---- Active category ---- */
+  /* ---- Navigation state ---- */
+  const [screen, setScreen] = useState<CreateScreen>("form");
+  const [payMethod, setPayMethod] = useState<PaymentMethod>("tnm");
+  const [paying, setPaying] = useState(false);
+
+  /* ---- Category ---- */
   const [activeIndex, setActiveIndex] = useState(0);
   const category = CATEGORIES[activeIndex].key;
   const isBus = category === "bus";
@@ -100,116 +87,52 @@ export default function Create() {
   const isTourism = category === "tourism";
   const showRoute = isBus || isFlight;
 
-  /* ---- Media ---- */
+  /* ---- Form state ---- */
   const [imageName, setImageName] = useState("");
-
-  /* ---- Core info ---- */
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
   const [organizer, setOrganizer] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
-
-  /* ---- Route (bus / flight) ---- */
   const [route, setRoute] = useState<RouteForm>({
     from: "",
     to: "",
     duration: "",
     stops: "",
   });
-
-  /* ---- Description & tags ---- */
   const [description, setDescription] = useState("");
   const [tagInput, setTagInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
-
-  /* ---- Tiers ---- */
   const [tiers, setTiers] = useState<TierForm[]>([
     { id: makeId(), name: "", price: "", currency: "MWK", perks: "", remaining: "" },
   ]);
-
   const [maxPerUser, setMaxPerUser] = useState("5");
 
   /* ---------------------------------------------------------------- */
-  // Dynamic labels based on category
+  // Dynamic labels
   /* ---------------------------------------------------------------- */
   const labels = {
-    title: isBus
-      ? "Route Name"
-      : isFlight
-      ? "Flight Title"
-      : isTourism
-      ? "Tour Name"
-      : "Event Name",
-    subtitle: isBus
-      ? "Route Summary"
-      : isFlight
-      ? "Flight Summary"
-      : "Short Tagline",
-    organizer: isBus
-      ? "Bus Company"
-      : isFlight
-      ? "Airline"
-      : isTourism
-      ? "Tour Operator"
-      : "Host / Organizer",
-    location: isBus
-      ? "Departure Terminal"
-      : isFlight
-      ? "Departure Airport"
-      : isTourism
-      ? "Meeting Point"
-      : "Venue",
+    title: isBus ? "Route Name" : isFlight ? "Flight Title" : isTourism ? "Tour Name" : "Event Name",
+    subtitle: isBus ? "Route Summary" : isFlight ? "Flight Summary" : "Short Tagline",
+    organizer: isBus ? "Bus Company" : isFlight ? "Airline" : isTourism ? "Tour Operator" : "Host / Organizer",
+    location: isBus ? "Departure Terminal" : isFlight ? "Departure Airport" : isTourism ? "Meeting Point" : "Venue",
     date: isBus || isFlight || isTourism ? "Travel Date" : "Event Date",
     time: isBus || isFlight ? "Departure Time" : "Start Time",
     routeFrom: isFlight ? "Origin Airport" : "From (City)",
     routeTo: isFlight ? "Destination Airport" : "To (City)",
     routeDuration: isBus ? "Journey Duration" : "Flight Duration",
     routeStops: isBus ? "Stop-overs (comma separated)" : "Layovers (optional)",
-    description: isBus
-      ? "Route Description"
-      : isFlight
-      ? "Flight Details"
-      : isTourism
-      ? "Tour Details"
-      : "Event Description",
-    tierName: isBus
-      ? "Seat Class"
-      : isFlight
-      ? "Cabin Class"
-      : "Ticket Type",
-    tierPrice: "Price",
+    description: isBus ? "Route Description" : isFlight ? "Flight Details" : isTourism ? "Tour Details" : "Event Description",
+    tierName: isBus || isFlight ? "Seat / Cabin Class" : "Ticket Type",
     tierRemaining: isBus || isFlight ? "Available Seats" : "Available Slots",
   };
 
   const placeholders = {
-    title: isBus
-      ? "e.g. Captain Bus Express"
-      : isFlight
-      ? "e.g. Malawi Airlines - LLW to JNB"
-      : isTourism
-      ? "e.g. Mount Mulanje Sapitwa Trek"
-      : "e.g. Lilongwe Food Fest",
-    subtitle: isBus
-      ? "Blantyre to Songwe Border, one comfortable journey"
-      : isFlight
-      ? "Non-stop flight, daily connections"
-      : "A short hook that appears under the title",
-    organizer: isBus
-      ? "Captain Tours"
-      : isFlight
-      ? "Malawi Airlines"
-      : isTourism
-      ? "Mulanje Mountain Guides"
-      : "Saba's Kitchen",
-    location: isBus
-      ? "Blantyre Bus Terminal"
-      : isFlight
-      ? "Kamuzu International Airport (LLW)"
-      : isTourism
-      ? "Likhubula Forest Lodge, Mulanje"
-      : "Portuguese Club, Lilongwe",
+    title: isBus ? "e.g. Captain Bus Express" : isFlight ? "e.g. Malawi Airlines - LLW to JNB" : isTourism ? "e.g. Mount Mulanje Trek" : "e.g. Lilongwe Food Fest",
+    subtitle: isBus ? "Blantyre to Songwe Border, one comfortable journey" : isFlight ? "Non-stop flight, daily connections" : "A short hook that appears under the title",
+    organizer: isBus ? "Captain Tours" : isFlight ? "Malawi Airlines" : isTourism ? "Mulanje Mountain Guides" : "Saba's Kitchen",
+    location: isBus ? "Blantyre Bus Terminal" : isFlight ? "Kamuzu International Airport (LLW)" : isTourism ? "Likhubula Forest Lodge, Mulanje" : "Portuguese Club, Lilongwe",
     routeFrom: isFlight ? "Lilongwe (LLW)" : "Blantyre",
     routeTo: isFlight ? "Johannesburg (JNB)" : "Songwe Border",
     routeDuration: isBus ? "12h 00m" : "2h 15m",
@@ -253,50 +176,79 @@ export default function Create() {
 
   const removeTag = (tag: string) => setTags((prev) => prev.filter((t) => t !== tag));
 
-  const handlePublish = () => {
-    const payload = {
-      id: `${category}-${Date.now()}`,
-      title,
-      subtitle,
-      category,
-      image: imageName || undefined,
-      organizer,
-      date: date ? `${date}T00:00:00` : new Date().toISOString(),
-      time,
-      location,
-      route: showRoute
-        ? {
-            from: route.from,
-            to: route.to,
-            duration: route.duration,
-            stops: route.stops
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
-          }
-        : undefined,
-      tiers: tiers.map((t) => ({
-        id: t.id,
-        name: t.name,
-        price: parseInt(t.price, 10) || 0,
-        currency: t.currency || "MWK",
-        perks: t.perks
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
-        remaining: parseInt(t.remaining, 10) || 0,
-      })),
-      description,
-      tags,
-      maxPerUser: parseInt(maxPerUser, 10) || 5,
-    };
+  const buildPayload = () => ({
+    id: `${category}-${Date.now()}`,
+    title,
+    subtitle,
+    category,
+    image: imageName || undefined,
+    organizer,
+    date: date ? `${date}T00:00:00` : new Date().toISOString(),
+    time,
+    location,
+    route: showRoute
+      ? {
+          from: route.from,
+          to: route.to,
+          duration: route.duration,
+          stops: route.stops
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+        }
+      : undefined,
+    tiers: tiers.map((t) => ({
+      id: t.id,
+      name: t.name,
+      price: parseInt(t.price, 10) || 0,
+      currency: t.currency || "MWK",
+      perks: t.perks
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
+      remaining: parseInt(t.remaining, 10) || 0,
+    })),
+    description,
+    tags,
+    maxPerUser: parseInt(maxPerUser, 10) || 5,
+  });
 
-    console.log("🚀 Publish payload:", JSON.stringify(payload, null, 2));
-    // TODO: POST to backend or append to local state
+  const handleGoToPayment = () => {
+    if (!title.trim()) return;
+    setScreen("checkout");
+  };
+
+  const handlePay = () => {
+    setPaying(true);
+    // Simulate payment gateway call
+    setTimeout(() => {
+      setPaying(false);
+      setScreen("success");
+      console.log("✅ Published after payment:", JSON.stringify(buildPayload(), null, 2));
+      // TODO: POST buildPayload() to your backend
+    }, 2200);
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setSubtitle("");
+    setOrganizer("");
+    setDate("");
+    setTime("");
+    setLocation("");
+    setRoute({ from: "", to: "", duration: "", stops: "" });
+    setDescription("");
+    setTags([]);
+    setTagInput("");
+    setTiers([{ id: makeId(), name: "", price: "", currency: "MWK", perks: "", remaining: "" }]);
+    setMaxPerUser("5");
+    setImageName("");
+    setPayMethod("tnm");
+    setScreen("form");
   };
 
   /* ---------------------------------------------------------------- */
-  // Render helpers
+  // Styles helpers
   /* ---------------------------------------------------------------- */
   const inputBase = {
     color: colors.ink,
@@ -305,6 +257,316 @@ export default function Create() {
     fontFamily: fontFamilies.body,
   };
 
+  /* ---------------------------------------------------------------- */
+  // RENDER: CHECKOUT
+  /* ---------------------------------------------------------------- */
+  if (screen === "checkout") {
+    return (
+      <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.bg, borderBottomColor: colors.border },
+          ]}
+        >
+          <Pressable onPress={() => setScreen("form")} style={styles.backBtn}>
+            <Feather name="arrow-left" size={24} color={colors.ink} />
+          </Pressable>
+          <Text
+            style={[
+              styles.headerTitle,
+              { color: colors.ink, fontFamily: fontFamilies.display },
+            ]}
+          >
+            Checkout
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: isDesktop ? spacing(8) : spacing(4),
+            paddingTop: spacing(6),
+            paddingBottom: isDesktop ? spacing(12) : spacing(24),
+          }}
+        >
+          {/* Fee Card */}
+          <View
+            style={[
+              styles.feeCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text
+              style={[
+                styles.feeLabel,
+                { color: colors.inkMuted, fontFamily: fontFamilies.body },
+              ]}
+            >
+              Platform Publishing Fee
+            </Text>
+            <Text
+              style={[
+                styles.feeAmount,
+                { color: colors.gold, fontFamily: fontFamilies.display },
+              ]}
+            >
+              {CURRENCY} {PLATFORM_FEE.toLocaleString()}
+            </Text>
+            <Text
+              style={[
+                styles.feeHint,
+                { color: colors.inkMuted, fontFamily: fontFamilies.body },
+              ]}
+            >
+              One-time fee to publish this {CATEGORIES[activeIndex].label.toLowerCase()}.
+            </Text>
+          </View>
+
+          {/* Payment Methods */}
+          <Text
+            style={[
+              styles.sectionLabel,
+              { color: colors.ink, fontFamily: fontFamilies.bodySemi, marginTop: spacing(5) },
+            ]}
+          >
+            Pay With
+          </Text>
+
+          <View style={{ gap: spacing(3) }}>
+            {/* TNM Mpamba */}
+            <Pressable
+              onPress={() => setPayMethod("tnm")}
+              style={[
+                styles.payRow,
+                {
+                  backgroundColor: payMethod === "tnm" ? colors.gold + "15" : colors.surface,
+                  borderColor: payMethod === "tnm" ? colors.gold : colors.border,
+                },
+              ]}
+            >
+              <Image
+                source={require("@/assets/images/tnm_mpamba.jpg")}
+                style={styles.payIcon}
+                resizeMode="contain"
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.payTitle,
+                    { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                  ]}
+                >
+                  TNM Mpamba
+                </Text>
+                <Text
+                  style={[
+                    styles.paySub,
+                    { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                  ]}
+                >
+                  Pay with mobile money
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.radio,
+                  {
+                    borderColor: payMethod === "tnm" ? colors.gold : colors.border,
+                    backgroundColor: payMethod === "tnm" ? colors.gold : "transparent",
+                  },
+                ]}
+              >
+                {payMethod === "tnm" && (
+                  <Feather name="check" size={14} color={colors.black} />
+                )}
+              </View>
+            </Pressable>
+
+            {/* Airtel Money */}
+            <Pressable
+              onPress={() => setPayMethod("airtel")}
+              style={[
+                styles.payRow,
+                {
+                  backgroundColor: payMethod === "airtel" ? colors.gold + "15" : colors.surface,
+                  borderColor: payMethod === "airtel" ? colors.gold : colors.border,
+                },
+              ]}
+            >
+              <Image
+                source={require("@/assets/images/airtel-money.png")}
+                style={styles.payIcon}
+                resizeMode="contain"
+              />
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.payTitle,
+                    { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                  ]}
+                >
+                  Airtel Money
+                </Text>
+                <Text
+                  style={[
+                    styles.paySub,
+                    { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                  ]}
+                >
+                  Pay with mobile money
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.radio,
+                  {
+                    borderColor: payMethod === "airtel" ? colors.gold : colors.border,
+                    backgroundColor: payMethod === "airtel" ? colors.gold : "transparent",
+                  },
+                ]}
+              >
+                {payMethod === "airtel" && (
+                  <Feather name="check" size={14} color={colors.black} />
+                )}
+              </View>
+            </Pressable>
+
+            {/* Card */}
+            <Pressable
+              onPress={() => setPayMethod("card")}
+              style={[
+                styles.payRow,
+                {
+                  backgroundColor: payMethod === "card" ? colors.gold + "15" : colors.surface,
+                  borderColor: payMethod === "card" ? colors.gold : colors.border,
+                },
+              ]}
+            >
+              <View
+                style={[
+                  styles.payIconFallback,
+                  { backgroundColor: colors.bgAlt },
+                ]}
+              >
+                <Feather name="credit-card" size={22} color={colors.ink} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.payTitle,
+                    { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                  ]}
+                >
+                  Credit / Debit Card
+                </Text>
+                <Text
+                  style={[
+                    styles.paySub,
+                    { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                  ]}
+                >
+                  Visa, Mastercard, etc.
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.radio,
+                  {
+                    borderColor: payMethod === "card" ? colors.gold : colors.border,
+                    backgroundColor: payMethod === "card" ? colors.gold : "transparent",
+                  },
+                ]}
+              >
+                {payMethod === "card" && (
+                  <Feather name="check" size={14} color={colors.black} />
+                )}
+              </View>
+            </Pressable>
+          </View>
+
+          {/* Pay Button */}
+          <Pressable
+            onPress={handlePay}
+            disabled={paying}
+            style={[
+              styles.payBtn,
+              { backgroundColor: colors.gold, opacity: paying ? 0.7 : 1 },
+            ]}
+          >
+            {paying ? (
+              <ActivityIndicator color={colors.black} />
+            ) : (
+              <Text
+                style={[
+                  styles.payBtnText,
+                  { color: colors.black, fontFamily: fontFamilies.bodySemi },
+                ]}
+              >
+                Pay {CURRENCY} {PLATFORM_FEE.toLocaleString()}
+              </Text>
+            )}
+          </Pressable>
+        </ScrollView>
+      </View>
+    );
+  }
+
+  /* ---------------------------------------------------------------- */
+  // RENDER: SUCCESS
+  /* ---------------------------------------------------------------- */
+  if (screen === "success") {
+    return (
+      <View
+        style={[
+          styles.wrap,
+          { backgroundColor: colors.bg, justifyContent: "center", alignItems: "center" },
+        ]}
+      >
+        <View
+          style={[
+            styles.successCircle,
+            { backgroundColor: colors.gold + "20" },
+          ]}
+        >
+          <Feather name="check" size={48} color={colors.gold} />
+        </View>
+        <Text
+          style={[
+            styles.successTitle,
+            { color: colors.ink, fontFamily: fontFamilies.display },
+          ]}
+        >
+          Payment Successful
+        </Text>
+        <Text
+          style={[
+            styles.successSub,
+            { color: colors.inkMuted, fontFamily: fontFamilies.body },
+          ]}
+        >
+          Your {CATEGORIES[activeIndex].label.toLowerCase()} has been published.
+        </Text>
+        <Pressable
+          onPress={resetForm}
+          style={[styles.publishBtn, { backgroundColor: colors.gold, marginTop: spacing(6) }]}
+        >
+          <Text
+            style={[
+              styles.publishText,
+              { color: colors.white, fontFamily: fontFamilies.bodySemi },
+            ]}
+          >
+            Create Another
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  /* ---------------------------------------------------------------- */
+  // RENDER: FORM (default)
+  /* ---------------------------------------------------------------- */
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
       {/* Header */}
@@ -333,7 +595,7 @@ export default function Create() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ==================== CATEGORY SELECTOR ==================== */}
+        {/* Category selector */}
         <Text
           style={[
             styles.sectionLabel,
@@ -389,7 +651,7 @@ export default function Create() {
           })}
         </View>
 
-        {/* ==================== UPLOAD ==================== */}
+        {/* Upload */}
         <Text
           style={[
             styles.sectionLabel,
@@ -426,7 +688,7 @@ export default function Create() {
           </Text>
         </Pressable>
 
-        {/* ==================== BASIC INFO ==================== */}
+        {/* Basic Info */}
         <Text
           style={[
             styles.sectionLabel,
@@ -499,7 +761,7 @@ export default function Create() {
           </FormField>
         </View>
 
-        {/* ==================== ROUTE (Bus / Flight only) ==================== */}
+        {/* Route */}
         {showRoute && (
           <>
             <Text
@@ -562,7 +824,7 @@ export default function Create() {
           </>
         )}
 
-        {/* ==================== DESCRIPTION ==================== */}
+        {/* Description */}
         <Text
           style={[
             styles.sectionLabel,
@@ -587,7 +849,7 @@ export default function Create() {
           />
         </View>
 
-        {/* ==================== TAGS ==================== */}
+        {/* Tags */}
         <Text
           style={[
             styles.sectionLabel,
@@ -645,7 +907,7 @@ export default function Create() {
           )}
         </View>
 
-        {/* ==================== TIERS ==================== */}
+        {/* Tiers */}
         <Text
           style={[
             styles.sectionLabel,
@@ -699,7 +961,7 @@ export default function Create() {
                 />
               </FormField>
               <View style={{ width: spacing(3) }} />
-              <FormField label={labels.tierPrice} colors={colors} style={{ flex: 1 }}>
+              <FormField label="Price" colors={colors} style={{ flex: 1 }}>
                 <TextInput
                   placeholder="0"
                   placeholderTextColor={colors.inkMuted}
@@ -767,7 +1029,7 @@ export default function Create() {
           </Text>
         </Pressable>
 
-        {/* ==================== LIMITS ==================== */}
+        {/* Limits */}
         <Text
           style={[
             styles.sectionLabel,
@@ -793,10 +1055,10 @@ export default function Create() {
           </FormField>
         </View>
 
-        {/* ==================== ACTIONS ==================== */}
+        {/* Publish */}
         <View style={styles.actions}>
           <Pressable
-            onPress={handlePublish}
+            onPress={handleGoToPayment}
             style={[styles.publishBtn, { backgroundColor: colors.gold }]}
           >
             <Text
@@ -805,7 +1067,7 @@ export default function Create() {
                 { color: colors.white, fontFamily: fontFamilies.bodySemi },
               ]}
             >
-              Publish {CATEGORIES[activeIndex].label}
+              Continue to Payment
             </Text>
           </Pressable>
         </View>
@@ -849,12 +1111,22 @@ function FormField({
 const styles = StyleSheet.create({
   wrap: { width: "100%", flex: 1 },
   header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
     marginTop: Platform.OS === "web" ? 0 : 30,
   },
   headerTitle: { fontSize: 20, fontWeight: "700" },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   scroll: { flex: 1 },
 
   sectionLabel: {
@@ -983,4 +1255,64 @@ const styles = StyleSheet.create({
     borderRadius: radii.full,
   },
   publishText: { fontSize: 15 },
+
+  /* ---- Checkout ---- */
+  feeCard: {
+    borderWidth: 1,
+    borderRadius: radii.xl,
+    padding: spacing(6),
+    alignItems: "center",
+    gap: spacing(2),
+  },
+  feeLabel: { fontSize: 14 },
+  feeAmount: { fontSize: 32, fontWeight: "800" },
+  feeHint: { fontSize: 13, textAlign: "center" },
+
+  payRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(3),
+    padding: spacing(4),
+    borderWidth: 1.5,
+    borderRadius: radii.xl,
+  },
+  payIcon: { width: 40, height: 40 },
+  payIconFallback: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  payTitle: { fontSize: 15 },
+  paySub: { fontSize: 12, marginTop: 2 },
+
+  radio: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  payBtn: {
+    marginTop: spacing(6),
+    paddingVertical: spacing(4),
+    borderRadius: radii.full,
+    alignItems: "center",
+  },
+  payBtnText: { fontSize: 16 },
+
+  /* ---- Success ---- */
+  successCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing(4),
+  },
+  successTitle: { fontSize: 24, marginBottom: spacing(2) },
+  successSub: { fontSize: 14, textAlign: "center", paddingHorizontal: spacing(6) },
 });

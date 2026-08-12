@@ -16,8 +16,8 @@ import { fontFamilies, radii, spacing } from "../theme/tokens";
 import BusTickets from "./BusTickets";
 import EventsTickets from "./EventsTickets";
 import FlightTickets from "./FlightTickets";
-import PopularTickets from "./PopularTickets";
 import PaymentPage from "./PaymentPage";
+import PopularTickets from "./PopularTickets";
 import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
 import TourismTickets from "./TourismTickets";
 
@@ -75,7 +75,7 @@ function CategoryTabs({
                 style={[
                   styles.pillText,
                   {
-                    color: isSelected ? colors.black : colors.ink,
+                    color: isSelected ? colors.white : colors.ink,
                     fontFamily: fontFamilies.bodySemi,
                   },
                 ]}
@@ -245,7 +245,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               ]}
               onPress={() => onOpenAuth?.()}
             >
-              <Feather name="user" size={18} color={colors.ink} />
+              <Feather name="user" size={18} color={colors.gold} />
             </Pressable>
 
             <Pressable
@@ -256,7 +256,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               ]}
               onPress={() => onOpenSettings?.()}
             >
-              <Feather name="settings" size={18} color={colors.ink} />
+              <Feather name="settings" size={18} color={colors.gold} />
             </Pressable>
           </View>
           <View
@@ -265,7 +265,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               {
                 backgroundColor: colors.bgAlt,
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: colors.inkMuted,
               },
             ]}
           >

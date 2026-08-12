@@ -3,12 +3,12 @@ export type ThemeMode = "light" | "dark";
 export const palette = {
   black: "#000000",
   white: "#FFFFFF",
-  gold: "#D4A017",
+  gold: "#83a3df",
   goldDeep: "#B8860B",
   inkLight: "#FFFFFF",
   inkDark: "#000000",
-  mutedDark: "#666666",
-  mutedLight: "#B5B5B5",
+  mutedDark: "#3d5d9c",
+  mutedLight: "#3d5d9c",
   surfaceLight: "#FFFFFF",
   surfaceAltLight: "#F5F5F5",
 };

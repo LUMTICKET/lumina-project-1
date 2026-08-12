@@ -73,13 +73,13 @@ function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
               {item.route === "Feeds" ? (
                 <ReelsIcon
                   size={24}
-                  color={isActive ? colors.ink : colors.inkMuted}
+                  color={isActive ? colors.gold : colors.inkMuted}
                 />
               ) : (
                 <Feather
                   name={item.icon}
                   size={24}
-                  color={isActive ? colors.ink : colors.inkMuted}
+                  color={isActive ? colors.gold : colors.inkMuted}
                 />
               )}
             </Pressable>
@@ -132,13 +132,13 @@ function MobileBottomNav({ currentRoute, onNavigate }: NavbarProps) {
             {item.route === "Feeds" ? (
               <ReelsIcon
                 size={26}
-                color={isActive ? colors.ink : colors.inkMuted}
+                color={isActive ? colors.gold : colors.inkMuted}
               />
             ) : (
               <Feather
                 name={item.icon}
                 size={26}
-                color={isActive ? colors.ink : colors.inkMuted}
+                color={isActive ? colors.gold : colors.inkMuted}
               />
             )}
           </Pressable>

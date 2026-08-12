@@ -113,7 +113,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   /** Standalone category view (no tabs, category handles its own list→config→payment) */
   const [standaloneCategory, setStandaloneCategory] = useState<number | null>(null);
 
-  const iconOffset = Platform.OS !== "web" ? { marginTop: 20 } : {};
+  const iconOffset = Platform.OS !== "web" ? { marginTop: 45 } : {};
 
   /* ---------- Standalone category (self-contained, no tabs) ---------- */
   if (standaloneCategory !== null) {
@@ -200,7 +200,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                 {
                   backgroundColor: colors.bgAlt,
                   borderWidth: 1,
-                  borderColor: colors.border,
+                  borderColor: colors.gold,
                 },
               ]}
             >
@@ -222,7 +222,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               style={[styles.profilePoint, { backgroundColor: colors.bgAlt }]}
               onPress={() => onOpenAuth?.()}
             >
-              <Feather name="user" size={20} color={colors.ink} />
+              <Feather name="user" size={20} color={colors.gold} />
             </Pressable>
           </View>
         </View>
@@ -245,7 +245,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               ]}
               onPress={() => onOpenAuth?.()}
             >
-              <Feather name="user" size={18} color={colors.gold} />
+              <Feather name="user" size={18} color={colors.inkMuted} />
             </Pressable>
 
             <Pressable
@@ -256,7 +256,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               ]}
               onPress={() => onOpenSettings?.()}
             >
-              <Feather name="settings" size={18} color={colors.gold} />
+              <Feather name="settings" size={18} color={colors.inkMuted} />
             </Pressable>
           </View>
           <View

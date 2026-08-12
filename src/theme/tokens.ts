@@ -4,7 +4,7 @@ export const palette = {
   black: "#000000",
   white: "#FFFFFF",
   gold: "#83a3df",
-  goldDeep: "#B8860B",
+  goldDeep: "#5d8fec",
   inkLight: "#FFFFFF",
   inkDark: "#000000",
   mutedDark: "#3d5d9c",

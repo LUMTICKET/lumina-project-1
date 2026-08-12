@@ -7,6 +7,7 @@ import {
   Text,
   useWindowDimensions,
   View,
+  Platform,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
@@ -227,6 +228,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
+    marginTop: Platform.OS === "web" ? 0 : 30,
   },
   headerTitle: {
     fontSize: 20,

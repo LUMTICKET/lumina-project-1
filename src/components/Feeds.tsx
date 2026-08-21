@@ -133,9 +133,11 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
     player.loop = true;
   });
 
+  /* eslint-disable react-hooks/immutability -- expo-video exposes muting as a mutable player property. */
   useEffect(() => {
     if (player) player.muted = isMuted;
   }, [isMuted, player]);
+  /* eslint-enable react-hooks/immutability */
 
   useEffect(() => {
     if (Platform.OS === "web") {
@@ -144,10 +146,11 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
     }
   }, [source]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- readiness is synchronized from the external player. */
   useEffect(() => {
     if (!player) return;
 
-    if (player.status === "readyToPlay" || player.status === "playing") {
+    if (player.status === "readyToPlay") {
       setIsReady(true);
       if (!player.playing) player.play();
       return;
@@ -168,7 +171,7 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
     }
 
     interval = setInterval(() => {
-      if (player.status === "readyToPlay" || player.status === "playing") {
+      if (player.status === "readyToPlay") {
         setIsReady(true);
         if (!player.playing) player.play();
         if (interval) clearInterval(interval);
@@ -179,6 +182,7 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
       if (interval) clearInterval(interval);
     };
   }, [player]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <View style={StyleSheet.absoluteFill}>
@@ -187,7 +191,7 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
         player={player}
         contentFit="cover"
         nativeControls={false}
-        allowsFullscreen={false}
+        fullscreenOptions={{ enable: false }}
       />
       {!isReady && (
         <View style={[StyleSheet.absoluteFill, styles.videoLoading]}>

@@ -117,18 +117,18 @@ function useSlotReservation(expiryMinutes: number = 120) {
   const [secondsLeft, setSecondsLeft] = useState(0);
   const timerRef = useRef<any>(null);
 
-  const reserve = () => {
+  const reserve = useCallback(() => {
     const now = Date.now();
     const expires = now + expiryMinutes * 60 * 1000;
     setSlot({ reservedAt: now, expiresAt: expires, active: true });
     setSecondsLeft(expiryMinutes * 60);
-  };
+  }, [expiryMinutes]);
 
-  const cancel = () => {
+  const cancel = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     setSlot(null);
     setSecondsLeft(0);
-  };
+  }, []);
 
   useEffect(() => {
     if (!slot?.active) return;
@@ -169,9 +169,9 @@ function RouteAnimation({
   const isFlight = category === "flight";
   const showAnimation = isBus || isFlight;
 
-  const busProgress = useRef(new RNAnimated.Value(0)).current;
-  const pulseA = useRef(new RNAnimated.Value(1)).current;
-  const pulseB = useRef(new RNAnimated.Value(1)).current;
+  const [busProgress] = useState(() => new RNAnimated.Value(0));
+  const [pulseA] = useState(() => new RNAnimated.Value(1));
+  const [pulseB] = useState(() => new RNAnimated.Value(1));
 
   const radiusA = pulseA.interpolate({
     inputRange: [1, 1.6],
@@ -247,7 +247,7 @@ function RouteAnimation({
       a.stop();
       b.stop();
     };
-  }, [showAnimation, route]);
+  }, [showAnimation, route, busProgress, pulseA, pulseB]);
 
   if (!showAnimation || !route) {
     return null;
@@ -655,7 +655,7 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase, onNaviga
   const isFlight = ticket.category === "flight";
   const showRouteAnimation = isBus || isFlight;
 
-  const handlePrimaryAction = () => {
+  const handlePrimaryAction = useCallback(() => {
     if (purchaseMode === "slot" && !isActive) {
       reserve();
       return;
@@ -674,9 +674,21 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase, onNaviga
     };
 
     onNavigateToPayment?.(payload);
-  };
+  }, [
+    purchaseMode,
+    isActive,
+    reserve,
+    ticket,
+    selectedTierId,
+    quantity,
+    slot?.expiresAt,
+    totalPrice,
+    currency,
+    selectedTier,
+    onNavigateToPayment,
+  ]);
 
-  const ContentCard = useCallback(
+  const renderContentCard = useCallback(
     () => (
       <View
         style={[
@@ -1125,6 +1137,7 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase, onNaviga
       countdownLabel,
       showRouteAnimation,
       handlePrimaryAction,
+      cancel,
     ]
   );
 
@@ -1164,7 +1177,7 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase, onNaviga
           }}
         >
           <View style={{ maxWidth: 720, width: "100%" }}>
-            <ContentCard />
+            {renderContentCard()}
           </View>
         </View>
       </View>
@@ -1197,7 +1210,7 @@ export default function TicketConfigPage({ ticket, onClose, onPurchase, onNaviga
         <View style={{ width: 40 }} />
       </View>
 
-      <ContentCard />
+      {renderContentCard()}
     </View>
   );
 }

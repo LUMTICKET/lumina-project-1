@@ -177,7 +177,7 @@ export default function PaymentPage({ payload, onClose, onComplete }: PaymentPag
 
   const isProcessing = status === "processing";
 
-  const handlePay = async () => {
+  const handlePay = useCallback(async () => {
     if (isProcessing) return;
     setStatus("processing");
 
@@ -189,9 +189,9 @@ export default function PaymentPage({ payload, onClose, onComplete }: PaymentPag
         reference: `LUM-${Date.now()}`,
       });
     }, 2500);
-  };
+  }, [isProcessing, method, onComplete]);
 
-  const isValid = () => {
+  const isValid = useCallback(() => {
     if (method === "mpamba" || method === "airtel") {
       return phone.length >= 9;
     }
@@ -201,9 +201,9 @@ export default function PaymentPage({ payload, onClose, onComplete }: PaymentPag
       cardCvv.length >= 3 &&
       cardName.trim().length > 0
     );
-  };
+  }, [method, phone, cardNumber, cardExpiry, cardCvv, cardName]);
 
-  const Content = useCallback(
+  const renderContent = useCallback(
     () => (
       <View
         style={[
@@ -652,6 +652,8 @@ export default function PaymentPage({ payload, onClose, onComplete }: PaymentPag
       status,
       isProcessing,
       handlePay,
+      isValid,
+      onClose,
     ]
   );
 
@@ -696,11 +698,11 @@ export default function PaymentPage({ payload, onClose, onComplete }: PaymentPag
             }}
           >
             <View style={{ maxWidth: 640, width: "100%" }}>
-              <Content />
+              {renderContent()}
             </View>
           </View>
         ) : (
-          <Content />
+          <View style={{ flex: 1 }}>{renderContent()}</View>
         )}
       </View>
     </Wrapper>

@@ -133,9 +133,11 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
     player.loop = true;
   });
 
+  /* eslint-disable react-hooks/immutability -- expo-video exposes muting as a mutable player property. */
   useEffect(() => {
     if (player) player.muted = isMuted;
   }, [isMuted, player]);
+  /* eslint-enable react-hooks/immutability */
 
   useEffect(() => {
     if (Platform.OS === "web") {
@@ -144,6 +146,7 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
     }
   }, [source]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- readiness is synchronized from the external player. */
   useEffect(() => {
     if (!player) return;
 
@@ -179,6 +182,7 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
       if (interval) clearInterval(interval);
     };
   }, [player]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return (
     <View style={StyleSheet.absoluteFill}>

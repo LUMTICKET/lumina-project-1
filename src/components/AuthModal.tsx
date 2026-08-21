@@ -30,7 +30,7 @@ export default function AuthModal({
   initialMode = "signup",
 }: AuthModalProps) {
   const { colors } = useLumTheme();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
   const isSmallPhone = width < 380;
 

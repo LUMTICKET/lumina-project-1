@@ -77,7 +77,7 @@ export default function FlightTickets({ onSelectTicket, onBack }: FlightTicketsP
   else if (width >= 1100) columnCount = 5;
   else if (width >= 768) columnCount = 3;
 
-  const columns: Array<typeof ITEMS> = Array.from({ length: columnCount }, () => []);
+  const columns: (typeof ITEMS)[] = Array.from({ length: columnCount }, () => []);
   ITEMS.forEach((item, i) => columns[i % columnCount].push(item));
 
   const showHeader = !!onBack;

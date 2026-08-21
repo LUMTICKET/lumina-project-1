@@ -49,10 +49,7 @@ jobs:
         continue-on-error: true
         run: npx --no-install expo install --check
 
-      # The repository has pre-existing type errors. Keep this advisory until
-      # the baseline is clean, then remove continue-on-error.
-      - name: Type-check (advisory)
-        continue-on-error: true
+      - name: Type-check
         run: npm run typecheck
 
       # Expo's generated React Compiler rules expose pre-existing findings.

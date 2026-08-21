@@ -147,7 +147,7 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
   useEffect(() => {
     if (!player) return;
 
-    if (player.status === "readyToPlay" || player.status === "playing") {
+    if (player.status === "readyToPlay") {
       setIsReady(true);
       if (!player.playing) player.play();
       return;
@@ -168,7 +168,7 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
     }
 
     interval = setInterval(() => {
-      if (player.status === "readyToPlay" || player.status === "playing") {
+      if (player.status === "readyToPlay") {
         setIsReady(true);
         if (!player.playing) player.play();
         if (interval) clearInterval(interval);
@@ -187,7 +187,7 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
         player={player}
         contentFit="cover"
         nativeControls={false}
-        allowsFullscreen={false}
+        fullscreenOptions={{ enable: false }}
       />
       {!isReady && (
         <View style={[StyleSheet.absoluteFill, styles.videoLoading]}>

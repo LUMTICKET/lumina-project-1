@@ -52,10 +52,7 @@ jobs:
       - name: Type-check
         run: npm run typecheck
 
-      # Expo's generated React Compiler rules expose pre-existing findings.
-      # Keep these visible until the lint baseline is clean.
-      - name: Lint (advisory)
-        continue-on-error: true
+      - name: Lint
         run: npm run lint
 
       - name: Export web app

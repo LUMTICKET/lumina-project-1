@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Image,
   Platform,
@@ -12,8 +12,8 @@ import {
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
-import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
 import PaymentPage, { PaymentMethod } from "./PaymentPage";
+import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
 
 /* ------------------------------------------------------------------ */
 // Data
@@ -70,17 +70,129 @@ const ITEMS: TicketConfig[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-// Flow
+// Types
 /* ------------------------------------------------------------------ */
 type Screen = "list" | "config" | "payment";
 
 interface BusTicketsProps {
-  /** Tabbed mode: lets HomePage render the config page */
   onSelectTicket?: (ticket: TicketConfig) => void;
-  /** Standalone mode: renders a sticky header with a back button */
   onBack?: () => void;
 }
 
+interface SelectorProps {
+  label: string;
+  value: string;
+  placeholder: string;
+  pickerType: "from" | "to" | "date";
+  options: string[];
+  colors: any;
+  active: boolean;
+  onToggle: (type: "from" | "to" | "date") => void;
+  onSelect: (val: string) => void;
+  formatOption?: (val: string) => string;
+}
+
+/* ------------------------------------------------------------------ */
+// Reusable selector (defined outside to avoid re-mounts)
+/* ------------------------------------------------------------------ */
+function Selector({
+  label,
+  value,
+  placeholder,
+  pickerType,
+  options,
+  colors,
+  active,
+  onToggle,
+  onSelect,
+  formatOption,
+}: SelectorProps) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 140,
+        // FIX: relative positioning is required for zIndex to work on web
+        // and for absolute children to anchor correctly.
+        position: "relative",
+        zIndex: active ? 50 : 1,
+        // FIX: elevation ensures Android draws this layer above siblings
+        elevation: active ? 12 : 1,
+      }}
+    >
+      <Pressable
+        style={[
+          styles.selectorField,
+          { borderColor: colors.border, backgroundColor: colors.bg },
+        ]}
+        onPress={() => onToggle(pickerType)}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.selectorLabel, { color: colors.inkMuted }]}>
+            {label}
+          </Text>
+          <Text
+            style={[
+              styles.selectorValue,
+              { color: value ? colors.ink : colors.inkMuted },
+            ]}
+            numberOfLines={1}
+          >
+            {value ? (formatOption ? formatOption(value) : value) : placeholder}
+          </Text>
+        </View>
+        <Feather
+          name={active ? "chevron-up" : "chevron-down"}
+          size={16}
+          color={colors.inkMuted}
+        />
+      </Pressable>
+
+      {active && (
+        <View
+          style={[
+            styles.optionsList,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+          // FIX: capture touches so tapping inside the dropdown doesn't
+          // bubble up to the list items underneath it.
+          onStartShouldSetResponder={() => true}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
+          <Pressable
+            style={styles.optionItem}
+            onPress={() => {
+              onSelect("");
+              onToggle(pickerType);
+            }}
+          >
+            <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body }}>
+              Any
+            </Text>
+          </Pressable>
+          {options.map((opt) => (
+            <Pressable
+              key={opt}
+              style={styles.optionItem}
+              onPress={() => {
+                onSelect(opt);
+                onToggle(pickerType);
+              }}
+            >
+              <Text style={{ color: colors.ink, fontFamily: fontFamilies.body }}>
+                {formatOption ? formatOption(opt) : opt}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+// Main component
+/* ------------------------------------------------------------------ */
 export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
@@ -90,7 +202,16 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
   const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
   const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
 
-  // 1. List → Config (or delegate to parent in tabbed mode)
+  // Journey filters
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [journeyDate, setJourneyDate] = useState("");
+  const [openPicker, setOpenPicker] = useState<"from" | "to" | "date" | null>(null);
+
+  const handleTogglePicker = (type: "from" | "to" | "date") => {
+    setOpenPicker((prev) => (prev === type ? null : type));
+  };
+
   const handleSelectTicket = (ticket: TicketConfig) => {
     if (onSelectTicket && !onBack) {
       onSelectTicket(ticket);
@@ -100,29 +221,64 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
     setScreen("config");
   };
 
-  // 2. Config → Payment
   const handleNavigateToPayment = (payload: PurchasePayload) => {
     setPurchasePayload(payload);
     setScreen("payment");
   };
 
-  // 3. Payment back → Config
   const handlePaymentClose = () => {
     setScreen("config");
   };
 
-  // 4. Payment done → List
-  const handlePaymentComplete = (result: { success: boolean; method: PaymentMethod; reference?: string }) => {
+  const handlePaymentComplete = (result: {
+    success: boolean;
+    method: PaymentMethod;
+    reference?: string;
+  }) => {
     console.log("Payment result:", result);
     setScreen("list");
     setSelectedTicket(null);
     setPurchasePayload(null);
   };
 
-  // 5. Config back → List
   const handleConfigClose = () => {
     setScreen("list");
     setSelectedTicket(null);
+  };
+
+  /* ---------------- Filter logic ---------------- */
+  const filteredItems = useMemo(() => {
+    return ITEMS.filter((item) => {
+      if (from && item.route?.from !== from) return false;
+      if (to && item.route?.to !== to) return false;
+      if (journeyDate && item.date) {
+        const d = item.date.split("T")[0];
+        if (d !== journeyDate) return false;
+      }
+      return true;
+    });
+  }, [from, to, journeyDate]);
+
+  const fromOptions = useMemo(
+    () => [...new Set(ITEMS.map((i) => i.route?.from).filter(Boolean))] as string[],
+    []
+  );
+  const toOptions = useMemo(
+    () => [...new Set(ITEMS.map((i) => i.route?.to).filter(Boolean))] as string[],
+    []
+  );
+  const dateOptions = useMemo(
+    () => [...new Set(ITEMS.map((i) => i.date?.split("T")[0]).filter(Boolean))] as string[],
+    []
+  );
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   /* ---------------- RENDER: Ticket Config ---------------- */
@@ -147,14 +303,14 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
     );
   }
 
-  /* ---------------- RENDER: List (default) ---------------- */
+  /* ---------------- RENDER: List ---------------- */
   let columnCount = 2;
   if (width >= 1400) columnCount = 6;
   else if (width >= 1100) columnCount = 5;
   else if (width >= 768) columnCount = 3;
 
   const columns: Array<typeof ITEMS> = Array.from({ length: columnCount }, () => []);
-  ITEMS.forEach((item, i) => columns[i % columnCount].push(item));
+  filteredItems.forEach((item, i) => columns[i % columnCount].push(item));
 
   const showHeader = !!onBack;
 
@@ -195,6 +351,144 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
         }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Journey Planner */}
+        <View
+          style={{
+            maxWidth: 1600,
+            alignSelf: "center",
+            width: "100%",
+            marginBottom: spacing(4),
+            // FIX: establish a new stacking context so the dropdowns
+            // inside can rise above the masonry board below.
+            zIndex: 10,
+            position: "relative",
+          }}
+        >
+          <View
+            style={[
+              styles.journeyBar,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                flexDirection: isDesktop ? "row" : "column",
+              },
+            ]}
+          >
+            <Selector
+              label="From"
+              value={from}
+              placeholder="Select origin"
+              pickerType="from"
+              options={fromOptions}
+              colors={colors}
+              active={openPicker === "from"}
+              onToggle={handleTogglePicker}
+              onSelect={setFrom}
+            />
+
+            {!isDesktop ? (
+              <View
+                style={{
+                  height: 1,
+                  backgroundColor: colors.border,
+                  marginHorizontal: spacing(3),
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 1,
+                  backgroundColor: colors.border,
+                  marginVertical: spacing(2),
+                }}
+              />
+            )}
+
+            <Selector
+              label="To"
+              value={to}
+              placeholder="Select destination"
+              pickerType="to"
+              options={toOptions}
+              colors={colors}
+              active={openPicker === "to"}
+              onToggle={handleTogglePicker}
+              onSelect={setTo}
+            />
+
+            {!isDesktop ? (
+              <View
+                style={{
+                  height: 1,
+                  backgroundColor: colors.border,
+                  marginHorizontal: spacing(3),
+                }}
+              />
+            ) : (
+              <View
+                style={{
+                  width: 1,
+                  backgroundColor: colors.border,
+                  marginVertical: spacing(2),
+                }}
+              />
+            )}
+
+            <Selector
+              label="Date"
+              value={journeyDate}
+              placeholder="Select date"
+              pickerType="date"
+              options={dateOptions}
+              colors={colors}
+              active={openPicker === "date"}
+              onToggle={handleTogglePicker}
+              onSelect={setJourneyDate}
+              formatOption={formatDate}
+            />
+          </View>
+
+          {/* FIX: !! forces boolean so "" is not rendered as a text node */}
+          {!!(from || to || journeyDate) && (
+            <Pressable
+              onPress={() => {
+                setFrom("");
+                setTo("");
+                setJourneyDate("");
+                setOpenPicker(null);
+              }}
+              style={{
+                alignSelf: "flex-end",
+                marginTop: spacing(2),
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 4,
+              }}
+            >
+              <Feather name="x-circle" size={14} color={colors.gold} />
+              <Text
+                style={{
+                  color: colors.gold,
+                  fontFamily: fontFamilies.bodySemi,
+                  fontSize: 13,
+                }}
+              >
+                Clear filters
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Empty state */}
+        {filteredItems.length === 0 && (
+          <View style={{ alignItems: "center", paddingVertical: spacing(10) }}>
+            <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body }}>
+              No buses match your search.
+            </Text>
+          </View>
+        )}
+
+        {/* Masonry Board */}
         <View style={styles.board}>
           {columns.map((col, ci) => (
             <View key={ci} style={styles.column}>
@@ -204,29 +498,72 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
                   style={styles.pinWrap}
                   onPress={() => handleSelectTicket(pin)}
                 >
-                  <View style={[styles.pinCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
+                  <View
+                    style={[
+                      styles.pinCard,
+                      {
+                        backgroundColor: colors.surface,
+                        shadowColor: colors.shadow,
+                      },
+                    ]}
+                  >
                     <View style={styles.imageWrap}>
-                      <Image source={pin.image} style={[styles.pinImage, { height: 280 }]} resizeMode="cover" />
+                      <Image
+                        source={pin.image}
+                        style={[styles.pinImage, { height: 280 }]}
+                        resizeMode="cover"
+                      />
                       <View style={styles.saveOverlay}>
                         <Pressable
-                          style={[styles.saveBtn, { backgroundColor: colors.gold }]}
+                          style={[
+                            styles.saveBtn,
+                            { backgroundColor: colors.gold },
+                          ]}
                           onPress={() => handleSelectTicket(pin)}
                         >
-                          <Text style={[styles.saveText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>
+                          <Text
+                            style={[
+                              styles.saveText,
+                              {
+                                color: colors.white,
+                                fontFamily: fontFamilies.bodySemi,
+                              },
+                            ]}
+                          >
                             Book Seat
                           </Text>
                         </Pressable>
                       </View>
                     </View>
                     <View style={styles.pinBody}>
-                      <Text style={[styles.pinTitle, { color: colors.ink, fontFamily: fontFamilies.display }]} numberOfLines={2}>
+                      <Text
+                        style={[
+                          styles.pinTitle,
+                          {
+                            color: colors.ink,
+                            fontFamily: fontFamilies.display,
+                          },
+                        ]}
+                        numberOfLines={2}
+                      >
                         {pin.title}
                       </Text>
-                      <Text style={[styles.pinSubtitle, { color: colors.inkMuted, fontFamily: fontFamilies.body }]} numberOfLines={1}>
+                      <Text
+                        style={[
+                          styles.pinSubtitle,
+                          {
+                            color: colors.inkMuted,
+                            fontFamily: fontFamilies.body,
+                          },
+                        ]}
+                        numberOfLines={1}
+                      >
                         {pin.subtitle}
                       </Text>
                       {pin.route && (
-                        <Text style={[styles.routeMini, { color: colors.inkMuted }]}>
+                        <Text
+                          style={[styles.routeMini, { color: colors.inkMuted }]}
+                        >
                           {pin.route.from} → {pin.route.to}
                         </Text>
                       )}
@@ -268,16 +605,102 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.display,
   },
 
-  board: { flexDirection: "row", gap: spacing(3), alignItems: "flex-start", maxWidth: 1600, alignSelf: "center", width: "100%" },
+  /* Journey bar */
+  journeyBar: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    // FIX: removed overflow: 'hidden' so absolutely-positioned dropdowns
+    // are not clipped by this container on any platform.
+  },
+  selectorField: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2.5),
+  },
+  selectorLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+    fontFamily: fontFamilies.body,
+  },
+  selectorValue: {
+    fontSize: 14,
+    fontFamily: fontFamilies.bodySemi,
+  },
+  optionsList: {
+    // FIX: absolute positioning lets the dropdown float over the
+    // masonry board and other content instead of pushing it down.
+    position: "absolute",
+    top: "100%",
+    left: spacing(1),
+    right: spacing(1),
+    zIndex: 100,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    marginTop: 4,
+    paddingVertical: spacing(1),
+    maxHeight: 220,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    // FIX: elevation draws the dropdown above siblings on Android
+    // where shadow* props alone do not create elevation.
+    elevation: 10,
+  },
+  optionItem: {
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2.5),
+  },
+
+  /* Masonry */
+  board: {
+    flexDirection: "row",
+    gap: spacing(3),
+    alignItems: "flex-start",
+    maxWidth: 1600,
+    alignSelf: "center",
+    width: "100%",
+  },
   column: { flex: 1, gap: spacing(3) },
   pinWrap: { width: "100%", marginBottom: spacing(3) },
-  pinCard: { borderRadius: radii.xl, overflow: "hidden", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
+  pinCard: {
+    borderRadius: radii.xl,
+    overflow: "hidden",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
   imageWrap: { position: "relative", width: "100%" },
   pinImage: { width: "100%" },
-  saveOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-start", alignItems: "flex-end", padding: spacing(3) },
-  saveBtn: { paddingHorizontal: spacing(4), paddingVertical: spacing(2), borderRadius: radii.full, shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
+  saveOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    padding: spacing(3),
+  },
+  saveBtn: {
+    paddingHorizontal: spacing(4),
+    paddingVertical: spacing(2),
+    borderRadius: radii.full,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
   saveText: { fontSize: 13 },
-  pinBody: { paddingHorizontal: spacing(3), paddingTop: spacing(3), paddingBottom: spacing(3.5), gap: 4 },
+  pinBody: {
+    paddingHorizontal: spacing(3),
+    paddingTop: spacing(3),
+    paddingBottom: spacing(3.5),
+    gap: 4,
+  },
   pinTitle: { fontSize: 14, lineHeight: 18 },
   pinSubtitle: { fontSize: 12 },
   routeMini: { fontSize: 11, marginTop: 2 },

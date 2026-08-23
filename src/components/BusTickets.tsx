@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Image,
   Platform,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useWindowDimensions,
   View,
 } from "react-native";
@@ -70,6 +71,19 @@ const ITEMS: TicketConfig[] = [
 ];
 
 /* ------------------------------------------------------------------ */
+// Helpers
+/* ------------------------------------------------------------------ */
+function getAllLocations(items: TicketConfig[]): string[] {
+  const set = new Set<string>();
+  items.forEach((item) => {
+    if (item.route?.from) set.add(item.route.from);
+    if (item.route?.to) set.add(item.route.to);
+    item.route?.stops?.forEach((stop) => set.add(stop));
+  });
+  return Array.from(set).sort();
+}
+
+/* ------------------------------------------------------------------ */
 // Flow
 /* ------------------------------------------------------------------ */
 type Screen = "list" | "config" | "payment";
@@ -89,6 +103,49 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
   const [screen, setScreen] = useState<Screen>("list");
   const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
   const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
+
+  // Journey search state
+  const [fromLocation, setFromLocation] = useState<string>("");
+  const [toLocation, setToLocation] = useState<string>("");
+  const [showFromDropdown, setShowFromDropdown] = useState(false);
+  const [showToDropdown, setShowToDropdown] = useState(false);
+  const [fromQuery, setFromQuery] = useState("");
+  const [toQuery, setToQuery] = useState("");
+
+  const allLocations = useMemo(() => getAllLocations(ITEMS), []);
+
+  const filteredFromOptions = useMemo(() => {
+    if (!fromQuery) return allLocations;
+    return allLocations.filter((loc) =>
+      loc.toLowerCase().includes(fromQuery.toLowerCase())
+    );
+  }, [fromQuery, allLocations]);
+
+  const filteredToOptions = useMemo(() => {
+    if (!toQuery) return allLocations;
+    return allLocations.filter((loc) =>
+      loc.toLowerCase().includes(toQuery.toLowerCase())
+    );
+  }, [toQuery, allLocations]);
+
+  const filteredItems = useMemo(() => {
+    return ITEMS.filter((item) => {
+      const route = item.route;
+      if (!route) return false;
+      const matchesFrom = !fromLocation || route.from === fromLocation || route.stops?.includes(fromLocation);
+      const matchesTo = !toLocation || route.to === toLocation || route.stops?.includes(toLocation);
+      return matchesFrom && matchesTo;
+    });
+  }, [fromLocation, toLocation]);
+
+  const clearJourney = () => {
+    setFromLocation("");
+    setToLocation("");
+    setFromQuery("");
+    setToQuery("");
+    setShowFromDropdown(false);
+    setShowToDropdown(false);
+  };
 
   // 1. List → Config (or delegate to parent in tabbed mode)
   const handleSelectTicket = (ticket: TicketConfig) => {
@@ -153,10 +210,11 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
   else if (width >= 1100) columnCount = 5;
   else if (width >= 768) columnCount = 3;
 
-  const columns: Array<typeof ITEMS> = Array.from({ length: columnCount }, () => []);
-  ITEMS.forEach((item, i) => columns[i % columnCount].push(item));
+  const columns: Array<typeof filteredItems> = Array.from({ length: columnCount }, () => []);
+  filteredItems.forEach((item, i) => columns[i % columnCount].push(item));
 
   const showHeader = !!onBack;
+  const hasActiveFilter = fromLocation || toLocation;
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
@@ -195,6 +253,168 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
         }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Journey Search Section */}
+        <View style={[styles.journeyCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
+          <Text style={[styles.journeyTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+            Plan Your Journey
+          </Text>
+
+          <View style={styles.journeyRow}>
+            {/* From Selector */}
+            <View style={styles.journeyField}>
+              <Text style={[styles.fieldLabel, { color: colors.inkMuted }]}>From</Text>
+              <Pressable
+                style={[styles.selectBox, { borderColor: colors.border, backgroundColor: colors.bg }]}
+                onPress={() => {
+                  setShowFromDropdown(!showFromDropdown);
+                  setShowToDropdown(false);
+                }}
+              >
+                <Feather name="map-pin" size={14} color={colors.inkMuted} />
+                <Text
+                  style={[
+                    styles.selectText,
+                    { color: fromLocation ? colors.ink : colors.inkMuted, fontFamily: fontFamilies.body },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {fromLocation || "Select origin"}
+                </Text>
+                <Feather name="chevron-down" size={14} color={colors.inkMuted} />
+              </Pressable>
+
+              {showFromDropdown && (
+                <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <TextInput
+                    style={[styles.dropdownInput, { color: colors.ink, borderColor: colors.border }]}
+                    placeholder="Search location..."
+                    placeholderTextColor={colors.inkMuted}
+                    value={fromQuery}
+                    onChangeText={setFromQuery}
+                    autoFocus
+                  />
+                  <ScrollView style={styles.dropdownList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                    {filteredFromOptions.length === 0 ? (
+                      <Text style={[styles.dropdownEmpty, { color: colors.inkMuted }]}>No locations found</Text>
+                    ) : (
+                      filteredFromOptions.map((loc) => (
+                        <Pressable
+                          key={loc}
+                          style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                          onPress={() => {
+                            setFromLocation(loc);
+                            setFromQuery(loc);
+                            setShowFromDropdown(false);
+                          }}
+                        >
+                          <Text style={[styles.dropdownItemText, { color: colors.ink, fontFamily: fontFamilies.body }]}>
+                            {loc}
+                          </Text>
+                          {fromLocation === loc && (
+                            <Feather name="check" size={14} color={colors.gold} />
+                          )}
+                        </Pressable>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+
+            {/* Swap Icon */}
+            <View style={styles.swapWrap}>
+              <Pressable
+                style={[styles.swapBtn, { backgroundColor: colors.gold + "20" }]}
+                onPress={() => {
+                  const temp = fromLocation;
+                  setFromLocation(toLocation);
+                  setToLocation(temp);
+                  setFromQuery(toLocation);
+                  setToQuery(temp);
+                }}
+              >
+                <Feather name="arrow-right" size={16} color={colors.gold} />
+              </Pressable>
+            </View>
+
+            {/* To Selector */}
+            <View style={styles.journeyField}>
+              <Text style={[styles.fieldLabel, { color: colors.inkMuted }]}>To</Text>
+              <Pressable
+                style={[styles.selectBox, { borderColor: colors.border, backgroundColor: colors.bg }]}
+                onPress={() => {
+                  setShowToDropdown(!showToDropdown);
+                  setShowFromDropdown(false);
+                }}
+              >
+                <Feather name="navigation" size={14} color={colors.inkMuted} />
+                <Text
+                  style={[
+                    styles.selectText,
+                    { color: toLocation ? colors.ink : colors.inkMuted, fontFamily: fontFamilies.body },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {toLocation || "Select destination"}
+                </Text>
+                <Feather name="chevron-down" size={14} color={colors.inkMuted} />
+              </Pressable>
+
+              {showToDropdown && (
+                <View style={[styles.dropdown, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <TextInput
+                    style={[styles.dropdownInput, { color: colors.ink, borderColor: colors.border }]}
+                    placeholder="Search location..."
+                    placeholderTextColor={colors.inkMuted}
+                    value={toQuery}
+                    onChangeText={setToQuery}
+                    autoFocus
+                  />
+                  <ScrollView style={styles.dropdownList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                    {filteredToOptions.length === 0 ? (
+                      <Text style={[styles.dropdownEmpty, { color: colors.inkMuted }]}>No locations found</Text>
+                    ) : (
+                      filteredToOptions.map((loc) => (
+                        <Pressable
+                          key={loc}
+                          style={[styles.dropdownItem, { borderBottomColor: colors.border }]}
+                          onPress={() => {
+                            setToLocation(loc);
+                            setToQuery(loc);
+                            setShowToDropdown(false);
+                          }}
+                        >
+                          <Text style={[styles.dropdownItemText, { color: colors.ink, fontFamily: fontFamilies.body }]}>
+                            {loc}
+                          </Text>
+                          {toLocation === loc && (
+                            <Feather name="check" size={14} color={colors.gold} />
+                          )}
+                        </Pressable>
+                      ))
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {hasActiveFilter && (
+            <Pressable style={styles.clearWrap} onPress={clearJourney}>
+              <Feather name="x-circle" size={14} color={colors.inkMuted} />
+              <Text style={[styles.clearText, { color: colors.inkMuted }]}>Clear journey</Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Results Count */}
+        {hasActiveFilter && (
+          <Text style={[styles.resultsText, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+            {filteredItems.length} route{filteredItems.length !== 1 ? "s" : ""} found
+            {fromLocation && toLocation ? ` from ${fromLocation} to ${toLocation}` : fromLocation ? ` from ${fromLocation}` : ` to ${toLocation}`}
+          </Text>
+        )}
+
         <View style={styles.board}>
           {columns.map((col, ci) => (
             <View key={ci} style={styles.column}>
@@ -237,6 +457,18 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
             </View>
           ))}
         </View>
+
+        {filteredItems.length === 0 && (
+          <View style={styles.emptyState}>
+            <Feather name="map" size={48} color={colors.inkMuted} />
+            <Text style={[styles.emptyTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+              No routes found
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+              Try adjusting your journey search
+            </Text>
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -268,6 +500,121 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.display,
   },
 
+  /* Journey Search */
+  journeyCard: {
+    borderRadius: radii.xl,
+    padding: spacing(4),
+    marginBottom: spacing(4),
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+  },
+  journeyTitle: {
+    fontSize: 16,
+    marginBottom: spacing(3),
+  },
+  journeyRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: spacing(2),
+  },
+  journeyField: {
+    flex: 1,
+    position: "relative",
+    zIndex: 10,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: spacing(1),
+    fontFamily: fontFamilies.bodySemi,
+  },
+  selectBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(2),
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2.5),
+  },
+  selectText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  swapWrap: {
+    paddingBottom: spacing(1),
+  },
+  swapBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    transform: [{ rotate: "90deg" }],
+  },
+  dropdown: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    marginTop: spacing(1),
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    maxHeight: 220,
+    zIndex: 20,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+    overflow: "hidden",
+  },
+  dropdownInput: {
+    borderBottomWidth: 1,
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2.5),
+    fontSize: 14,
+    fontFamily: fontFamilies.body,
+  },
+  dropdownList: {
+    maxHeight: 180,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2.5),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  dropdownItemText: {
+    fontSize: 14,
+  },
+  dropdownEmpty: {
+    padding: spacing(4),
+    textAlign: "center",
+    fontSize: 13,
+  },
+  clearWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(1),
+    marginTop: spacing(3),
+    alignSelf: "flex-start",
+  },
+  clearText: {
+    fontSize: 12,
+    fontFamily: fontFamilies.bodySemi,
+  },
+  resultsText: {
+    fontSize: 13,
+    marginBottom: spacing(3),
+    marginLeft: spacing(1),
+  },
+
+  /* Masonry Board */
   board: { flexDirection: "row", gap: spacing(3), alignItems: "flex-start", maxWidth: 1600, alignSelf: "center", width: "100%" },
   column: { flex: 1, gap: spacing(3) },
   pinWrap: { width: "100%", marginBottom: spacing(3) },
@@ -281,4 +628,18 @@ const styles = StyleSheet.create({
   pinTitle: { fontSize: 14, lineHeight: 18 },
   pinSubtitle: { fontSize: 12 },
   routeMini: { fontSize: 11, marginTop: 2 },
+
+  /* Empty State */
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing(12),
+    gap: spacing(3),
+  },
+  emptyTitle: {
+    fontSize: 18,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+  },
 });

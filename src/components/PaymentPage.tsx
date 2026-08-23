@@ -382,7 +382,7 @@ export default function PaymentPage({ payload, onClose, onComplete }: PaymentPag
                 <TextInput
                   value={phone}
                   onChangeText={setPhone}
-                  keyboardType="phone-pad"
+                  keyboardType="number-pad"
                   maxLength={9}
                   placeholder="88XXXXXXX"
                   placeholderTextColor={colors.inkMuted}

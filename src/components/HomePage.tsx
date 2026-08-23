@@ -16,8 +16,8 @@ import { fontFamilies, radii, spacing } from "../theme/tokens";
 import BusTickets from "./BusTickets";
 import EventsTickets from "./EventsTickets";
 import FlightTickets from "./FlightTickets";
-import PopularTickets from "./PopularTickets";
 import PaymentPage from "./PaymentPage";
+import PopularTickets from "./PopularTickets";
 import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
 import TourismTickets from "./TourismTickets";
 
@@ -27,6 +27,18 @@ const CATEGORIES = [
   "Events Tickets",
   "Tourism Tickets",
   "Flight Tickets",
+];
+
+/* ------------------------------------------------------------------ */
+// Dropdown configs
+/* ------------------------------------------------------------------ */
+const DESKTOP_DROPDOWN = [
+  { label: "Create Account", icon: "user-plus" as const },
+];
+
+const MOBILE_DROPDOWN = [
+  { label: "Create Account", icon: "user-plus" as const },
+  { label: "Settings", icon: "settings" as const },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -75,7 +87,7 @@ function CategoryTabs({
                 style={[
                   styles.pillText,
                   {
-                    color: isSelected ? colors.black : colors.ink,
+                    color: isSelected ? colors.white : colors.ink,
                     fontFamily: fontFamilies.bodySemi,
                   },
                 ]}
@@ -113,7 +125,13 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   /** Standalone category view (no tabs, category handles its own list→config→payment) */
   const [standaloneCategory, setStandaloneCategory] = useState<number | null>(null);
 
-  const iconOffset = Platform.OS !== "web" ? { marginTop: 20 } : {};
+  /** Profile dropdown */
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+
+  /** Notification badge (default) */
+  const [notificationCount] = useState(3);
+
+  const iconOffset = Platform.OS !== "web" ? { marginTop: 45 } : {};
 
   /* ---------- Standalone category (self-contained, no tabs) ---------- */
   if (standaloneCategory !== null) {
@@ -139,8 +157,8 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
     return (
       <PaymentPage
         payload={purchasePayload}
-        onClose={() => setPurchasePayload(null)}           // back to config
-        onComplete={() => {                                // done, back to list
+        onClose={() => setPurchasePayload(null)}
+        onComplete={() => {
           setPurchasePayload(null);
           setSelectedTicket(null);
         }}
@@ -177,6 +195,14 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
     }
   };
 
+  const handleDropdownAction = (label: string) => {
+    setShowProfileDropdown(false);
+    if (label === "Create Account") onOpenAuth?.();
+    if (label === "Settings") onOpenSettings?.();
+  };
+
+  const dropdownItems = isDesktop ? DESKTOP_DROPDOWN : MOBILE_DROPDOWN;
+
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
       {/* Desktop top bar */}
@@ -200,7 +226,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                 {
                   backgroundColor: colors.bgAlt,
                   borderWidth: 1,
-                  borderColor: colors.border,
+                  borderColor: colors.gold,
                 },
               ]}
             >
@@ -218,12 +244,74 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               />
             </View>
 
-            <Pressable
-              style={[styles.profilePoint, { backgroundColor: colors.bgAlt }]}
-              onPress={() => onOpenAuth?.()}
-            >
-              <Feather name="user" size={20} color={colors.ink} />
-            </Pressable>
+            {/* Right-side icons: notification + profile */}
+            <View style={styles.rightIcons}>
+              {/* Notification bell */}
+              <Pressable
+                style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}
+              >
+                <View style={{ position: "relative" }}>
+                  <Feather name="bell" size={20} color={colors.inkMuted} />
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{notificationCount}</Text>
+                  </View>
+                </View>
+              </Pressable>
+
+              {/* Profile with dropdown */}
+              <View style={{ position: "relative", zIndex: 60 }}>
+                <Pressable
+                  style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}
+                  onPress={() => setShowProfileDropdown(!showProfileDropdown)}
+                >
+                  <Feather name="user" size={20} color={colors.gold} />
+                </Pressable>
+
+                {showProfileDropdown && (
+                  <>
+                    <Pressable
+                      style={StyleSheet.absoluteFill}
+                      pointerEvents="auto"
+                      onPress={() => setShowProfileDropdown(false)}
+                    />
+                    <View
+                      style={[
+                        styles.dropdown,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: colors.border,
+                          shadowColor: colors.shadow,
+                        },
+                      ]}
+                    >
+                      {dropdownItems.map((item, i) => (
+                        <Pressable
+                          key={item.label}
+                          onPress={() => handleDropdownAction(item.label)}
+                          style={[
+                            styles.dropdownItem,
+                            i < dropdownItems.length - 1 && {
+                              borderBottomWidth: 1,
+                              borderBottomColor: colors.border,
+                            },
+                          ]}
+                        >
+                          <Feather name={item.icon} size={18} color={colors.ink} />
+                          <Text
+                            style={[
+                              styles.dropdownText,
+                              { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                            ]}
+                          >
+                            {item.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </>
+                )}
+              </View>
+            </View>
           </View>
         </View>
       )}
@@ -237,26 +325,80 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
           ]}
         >
           <View style={styles.mobileActionRow}>
-            <Pressable
-              style={[
-                styles.profilePoint,
-                { backgroundColor: colors.bgAlt },
-                iconOffset,
-              ]}
-              onPress={() => onOpenAuth?.()}
-            >
-              <Feather name="user" size={18} color={colors.ink} />
-            </Pressable>
+            {/* Profile with dropdown */}
+            <View style={{ position: "relative", zIndex: 60 }}>
+              <Pressable
+                style={[
+                  styles.iconBtn,
+                  { backgroundColor: colors.bgAlt },
+                  iconOffset,
+                ]}
+                onPress={() => setShowProfileDropdown(!showProfileDropdown)}
+              >
+                <Feather name="user" size={18} color={colors.inkMuted} />
+              </Pressable>
 
+              {showProfileDropdown && (
+                <>
+                  <Pressable
+                    style={StyleSheet.absoluteFill}
+                    pointerEvents="auto"
+                    onPress={() => setShowProfileDropdown(false)}
+                  />
+                  <View
+                    style={[
+                      styles.dropdown,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        shadowColor: colors.shadow,
+                        left: 0,
+                        right: "auto",
+                      },
+                    ]}
+                  >
+                    {dropdownItems.map((item, i) => (
+                      <Pressable
+                        key={item.label}
+                        onPress={() => handleDropdownAction(item.label)}
+                        style={[
+                          styles.dropdownItem,
+                          i < dropdownItems.length - 1 && {
+                            borderBottomWidth: 1,
+                            borderBottomColor: colors.border,
+                          },
+                        ]}
+                      >
+                        <Feather name={item.icon} size={18} color={colors.ink} />
+                        <Text
+                          style={[
+                            styles.dropdownText,
+                            { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                          ]}
+                        >
+                          {item.label}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </>
+              )}
+            </View>
+
+            {/* Notification bell */}
             <Pressable
               style={[
-                styles.profilePoint,
+                styles.iconBtn,
                 { backgroundColor: colors.bgAlt },
                 iconOffset,
               ]}
-              onPress={() => onOpenSettings?.()}
             >
-              <Feather name="settings" size={18} color={colors.ink} />
+              <View style={{ position: "relative" }}>
+                <Feather name="bell" size={18} color={colors.inkMuted} />
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notificationCount}</Text>
+                </View>
+              </View>
             </Pressable>
           </View>
           <View
@@ -265,7 +407,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               {
                 backgroundColor: colors.bgAlt,
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: colors.inkMuted,
               },
             ]}
           >
@@ -344,12 +486,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingVertical: 0,
   },
-  profilePoint: {
+  iconBtn: {
     width: 48,
     height: 48,
     borderRadius: radii.full,
     alignItems: "center",
     justifyContent: "center",
+  },
+  rightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(3),
   },
   mobileSearchWrap: {
     paddingBottom: spacing(2),
@@ -378,5 +525,59 @@ const styles = StyleSheet.create({
   },
   pillText: {
     fontSize: 14,
+  },
+
+  /* ---- Dropdown ---- */
+  dropdown: {
+    position: "absolute",
+    top: 54,
+    right: 0,
+    minWidth: 220,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    paddingVertical: spacing(2),
+    paddingHorizontal: spacing(2),
+    ...Platform.select({
+      web: {
+        boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+      },
+      default: {
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+        shadowOffset: { width: 0, height: 8 },
+        elevation: 10,
+      },
+    }),
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(3),
+    paddingVertical: spacing(3),
+    paddingHorizontal: spacing(3),
+    borderRadius: radii.lg,
+  },
+  dropdownText: {
+    fontSize: 15,
+  },
+
+  /* ---- Notification Badge ---- */
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
+    fontFamily: fontFamilies.bodySemi,
   },
 });

@@ -1,14 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    useWindowDimensions,
-    View,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useLumTheme } from "../../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../../theme/tokens";
@@ -83,7 +83,7 @@ export default function PayoutSchedulePage({ onBack }: Props) {
                 },
               ]}
             >
-              <Text style={{ fontSize: 14, color: frequency === f ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi, textTransform: "capitalize" }}>
+              <Text style={{ fontSize: 15, color: frequency === f ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi, textTransform: "capitalize" }}>
                 {f}
               </Text>
             </Pressable>
@@ -96,19 +96,19 @@ export default function PayoutSchedulePage({ onBack }: Props) {
           {methods.map((method) => (
             <View key={method.id} style={[styles.methodRow, { borderColor: colors.border }]}>
               <View style={[styles.methodIcon, { backgroundColor: colors.bgAlt }]}>
-                <Feather name={method.type === "bank" ? "globe" : "smartphone"} size={18} color={colors.ink} />
+                <Feather name={method.type === "bank" ? "globe" : "smartphone"} size={20} color={colors.ink} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>{method.name}</Text>
-                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 12, marginTop: 2 }}>{method.account}</Text>
+                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 13, marginTop: 2 }}>{method.account}</Text>
               </View>
               {method.isDefault ? (
                 <View style={[styles.defaultBadge, { backgroundColor: colors.gold + "20" }]}>
-                  <Text style={{ fontSize: 11, color: colors.gold, fontFamily: fontFamilies.bodySemi }}>Default</Text>
+                  <Text style={{ fontSize: 12, color: colors.gold, fontFamily: fontFamilies.bodySemi }}>Default</Text>
                 </View>
               ) : (
                 <Pressable onPress={() => setDefault(method.id)}>
-                  <Text style={{ fontSize: 12, color: colors.inkMuted, fontFamily: fontFamilies.bodySemi }}>Set default</Text>
+                  <Text style={{ fontSize: 13, color: colors.inkMuted, fontFamily: fontFamilies.bodySemi }}>Set default</Text>
                 </Pressable>
               )}
             </View>
@@ -131,7 +131,7 @@ export default function PayoutSchedulePage({ onBack }: Props) {
                   },
                 ]}
               >
-                <Text style={{ fontSize: 13, color: accType === t ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi }}>
+                <Text style={{ fontSize: 14, color: accType === t ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi }}>
                   {t === "bank" ? "Bank Account" : "Mobile Money"}
                 </Text>
               </Pressable>
@@ -152,7 +152,7 @@ export default function PayoutSchedulePage({ onBack }: Props) {
             style={[styles.input, inputBase]}
           />
           <Pressable onPress={addMethod} style={[styles.actionBtn, { backgroundColor: colors.gold }]}>
-            <Text style={{ color: colors.black, fontFamily: fontFamilies.bodySemi }}>Add Method</Text>
+            <Text style={{ color: colors.black, fontFamily: fontFamilies.bodySemi, fontSize: 16 }}>Add Method</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -173,19 +173,24 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  sectionLabel: { fontSize: 14, marginBottom: spacing(2), marginTop: spacing(2) },
+
+  sectionLabel: { fontSize: 15, marginBottom: spacing(2), marginTop: spacing(2) },
+
   card: { borderRadius: radii.xl, padding: spacing(4) },
   freqBtn: { flex: 1, paddingVertical: spacing(3), borderRadius: radii.lg, borderWidth: 1.5, alignItems: "center" },
+
   methodRow: { flexDirection: "row", alignItems: "center", gap: spacing(3), paddingVertical: spacing(2), borderBottomWidth: 1 },
-  methodIcon: { width: 40, height: 40, borderRadius: radii.lg, alignItems: "center", justifyContent: "center" },
+  methodIcon: { width: 44, height: 44, borderRadius: radii.lg, alignItems: "center", justifyContent: "center" },
   defaultBadge: { paddingHorizontal: spacing(2.5), paddingVertical: spacing(1), borderRadius: radii.full },
+
   typeChip: { flex: 1, paddingVertical: spacing(2.5), borderRadius: radii.lg, borderWidth: 1.5, alignItems: "center" },
+
   input: {
-    height: 46,
+    height: 48,
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing(4),
-    fontSize: 14,
+    fontSize: 15,
   },
-  actionBtn: { paddingVertical: spacing(3), borderRadius: radii.full, alignItems: "center", marginTop: spacing(2) },
+  actionBtn: { paddingVertical: spacing(3.5), borderRadius: radii.full, alignItems: "center", marginTop: spacing(2) },
 });

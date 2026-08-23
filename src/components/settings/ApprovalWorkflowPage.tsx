@@ -1,20 +1,45 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   useWindowDimensions,
   View,
-  Platform,
 } from "react-native";
 import { useLumTheme } from "../../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../../theme/tokens";
 
 interface Props {
   onBack: () => void;
+}
+
+/* ------------------------------------------------------------------ */
+// Toggle — same as Settings.tsx
+/* ------------------------------------------------------------------ */
+function Toggle({ value, onValueChange }: { value: boolean; onValueChange: (v: boolean) => void }) {
+  const { colors } = useLumTheme();
+  return (
+    <Pressable
+      onPress={() => onValueChange(!value)}
+      style={[
+        styles.toggleTrack,
+        { backgroundColor: value ? colors.gold : colors.border },
+      ]}
+    >
+      <View
+        style={[
+          styles.toggleThumb,
+          {
+            backgroundColor: colors.white,
+            transform: [{ translateX: value ? 20 : 0 }],
+          },
+        ]}
+      />
+    </Pressable>
+  );
 }
 
 export default function ApprovalWorkflowPage({ onBack }: Props) {
@@ -68,15 +93,10 @@ export default function ApprovalWorkflowPage({ onBack }: Props) {
               ]}
             >
               <View style={{ flex: 1, paddingRight: spacing(4) }}>
-                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>{item.label}</Text>
-                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 12, marginTop: 2 }}>{item.desc}</Text>
+                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 16 }}>{item.label}</Text>
+                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 14, marginTop: 2 }}>{item.desc}</Text>
               </View>
-              <Switch
-                value={settings[item.key]}
-                onValueChange={() => toggle(item.key)}
-                trackColor={{ false: colors.border, true: colors.gold }}
-                thumbColor={colors.white}
-              />
+              <Toggle value={settings[item.key]} onValueChange={() => toggle(item.key)} />
             </View>
           ))}
         </View>
@@ -98,12 +118,31 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+
   card: { borderRadius: radii.xl, overflow: "hidden" },
+
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3.5),
+  },
+
+  toggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    padding: 2,
+    justifyContent: "center",
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });

@@ -5,7 +5,6 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   useWindowDimensions,
@@ -19,6 +18,32 @@ const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 
 interface Props {
   onBack: () => void;
+}
+
+/* ------------------------------------------------------------------ */
+// Toggle — same as Settings.tsx
+/* ------------------------------------------------------------------ */
+function Toggle({ value, onValueChange }: { value: boolean; onValueChange: (v: boolean) => void }) {
+  const { colors } = useLumTheme();
+  return (
+    <Pressable
+      onPress={() => onValueChange(!value)}
+      style={[
+        styles.toggleTrack,
+        { backgroundColor: value ? colors.gold : colors.border },
+      ]}
+    >
+      <View
+        style={[
+          styles.toggleThumb,
+          {
+            backgroundColor: colors.white,
+            transform: [{ translateX: value ? 20 : 0 }],
+          },
+        ]}
+      />
+    </Pressable>
+  );
 }
 
 export default function BusinessHoursPage({ onBack }: Props) {
@@ -40,7 +65,9 @@ export default function BusinessHoursPage({ onBack }: Props) {
         <Pressable onPress={onBack} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color={colors.ink} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>Business Hours</Text>
+        <Text style={[styles.headerTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+          Business Hours
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -53,33 +80,67 @@ export default function BusinessHoursPage({ onBack }: Props) {
       >
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           {hours.map((h, i) => (
-            <View key={h.day} style={[styles.row, i < hours.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border }]}>
+            <View
+              key={h.day}
+              style={[
+                styles.row,
+                i < hours.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+              ]}
+            >
               <View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
-                <Switch
+                <Toggle
                   value={h.isOpen}
                   onValueChange={(v) => updateHour(i, "isOpen", v)}
-                  trackColor={{ false: colors.border, true: colors.gold }}
-                  thumbColor={colors.white}
-                  style={{ marginRight: spacing(3) }}
                 />
-                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 14, width: 90 }}>{h.day}</Text>
+                <Text
+                  style={[
+                    styles.dayLabel,
+                    { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                  ]}
+                >
+                  {h.day}
+                </Text>
               </View>
+
               {h.isOpen ? (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: spacing(2) }}>
                   <TextInput
                     value={h.open}
                     onChangeText={(v) => updateHour(i, "open", v)}
-                    style={[styles.timeInput, { color: colors.ink, backgroundColor: colors.bg, borderColor: colors.border, fontFamily: fontFamilies.body }]}
+                    style={[
+                      styles.timeInput,
+                      {
+                        color: colors.ink,
+                        backgroundColor: colors.bg,
+                        borderColor: colors.border,
+                        fontFamily: fontFamilies.body,
+                      },
+                    ]}
                   />
-                  <Text style={{ color: colors.inkMuted }}>to</Text>
+                  <Text style={[styles.bodyText, { color: colors.inkMuted }]}>to</Text>
                   <TextInput
                     value={h.close}
                     onChangeText={(v) => updateHour(i, "close", v)}
-                    style={[styles.timeInput, { color: colors.ink, backgroundColor: colors.bg, borderColor: colors.border, fontFamily: fontFamilies.body }]}
+                    style={[
+                      styles.timeInput,
+                      {
+                        color: colors.ink,
+                        backgroundColor: colors.bg,
+                        borderColor: colors.border,
+                        fontFamily: fontFamilies.body,
+                      },
+                    ]}
                   />
                 </View>
               ) : (
-                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body }}>Closed</Text>
+                <Text
+                  style={[
+                    styles.bodyText,
+                    { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                  ]}
+                >
+                  Closed
+                </Text>
               )}
             </View>
           ))}
@@ -110,12 +171,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(3),
     paddingVertical: spacing(3),
   },
+  dayLabel: { fontSize: 15, width: 90 },
+  bodyText: { fontSize: 15 },
   timeInput: {
-    width: 70,
-    height: 36,
+    width: 76,
+    height: 38,
     borderWidth: 1,
     borderRadius: radii.lg,
     textAlign: "center",
-    fontSize: 13,
+    fontSize: 14,
+  },
+  toggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    padding: 2,
+    justifyContent: "center",
+    marginRight: spacing(3),
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
 });

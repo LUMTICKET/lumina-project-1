@@ -99,14 +99,14 @@ export default function TeamRolesPage({ onBack }: Props) {
                   },
                 ]}
               >
-                <Text style={{ fontSize: 13, color: role === r ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi }}>
+                <Text style={{ fontSize: 14, color: role === r ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi }}>
                   {ROLE_LABELS[r]}
                 </Text>
               </Pressable>
             ))}
           </View>
           <Pressable onPress={addMember} style={[styles.actionBtn, { backgroundColor: colors.gold }]}>
-            <Text style={{ color: colors.black, fontFamily: fontFamilies.bodySemi }}>Send Invite</Text>
+            <Text style={{ color: colors.black, fontFamily: fontFamilies.bodySemi, fontSize: 16 }}>Send Invite</Text>
           </Pressable>
         </View>
 
@@ -122,16 +122,16 @@ export default function TeamRolesPage({ onBack }: Props) {
               ]}
             >
               <View style={[styles.avatar, { backgroundColor: colors.bgAlt }]}>
-                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 14 }}>
+                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>
                   {member.name.charAt(0).toUpperCase()}
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>{member.name}</Text>
-                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 12, marginTop: 2 }}>{member.email}</Text>
+                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 13, marginTop: 2 }}>{member.email}</Text>
               </View>
               <View style={[styles.roleBadge, { backgroundColor: ROLE_COLORS[member.role] + "20" }]}>
-                <Text style={{ fontSize: 11, color: ROLE_COLORS[member.role], fontFamily: fontFamilies.bodySemi }}>
+                <Text style={{ fontSize: 12, color: ROLE_COLORS[member.role], fontFamily: fontFamilies.bodySemi }}>
                   {ROLE_LABELS[member.role]}
                 </Text>
               </View>
@@ -161,20 +161,26 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+
   card: { borderRadius: radii.xl, padding: spacing(4) },
-  label: { fontSize: 14, marginBottom: spacing(1) },
+  label: { fontSize: 15, marginBottom: spacing(1) },
+
   input: {
-    height: 46,
+    height: 48,
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing(4),
-    fontSize: 14,
+    fontSize: 15,
   },
+
   roleRow: { flexDirection: "row", gap: spacing(2), marginTop: spacing(1) },
   roleChip: { flex: 1, paddingVertical: spacing(2), borderRadius: radii.lg, borderWidth: 1.5, alignItems: "center" },
-  actionBtn: { paddingVertical: spacing(3), borderRadius: radii.full, alignItems: "center", marginTop: spacing(2) },
-  sectionLabel: { fontSize: 14, marginBottom: spacing(2) },
+
+  actionBtn: { paddingVertical: spacing(3.5), borderRadius: radii.full, alignItems: "center", marginTop: spacing(2) },
+
+  sectionLabel: { fontSize: 15, marginBottom: spacing(2) },
+
   memberRow: { flexDirection: "row", alignItems: "center", gap: spacing(3), paddingVertical: spacing(3.5), paddingHorizontal: spacing(4) },
-  avatar: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  avatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   roleBadge: { paddingHorizontal: spacing(2.5), paddingVertical: spacing(1), borderRadius: radii.full },
 });

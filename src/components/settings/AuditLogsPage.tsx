@@ -1,13 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
-  Platform,
 } from "react-native";
 import { useLumTheme } from "../../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../../theme/tokens";
@@ -58,8 +58,8 @@ export default function AuditLogsPage({ onBack }: Props) {
             >
               <View style={[styles.dot, { backgroundColor: colors.gold }]} />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 14 }}>{log.action}</Text>
-                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 12, marginTop: 4 }}>
+                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 16 }}>{log.action}</Text>
+                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 14, marginTop: 4 }}>
                   {log.user} · {log.timestamp} {log.ip ? `· ${log.ip}` : ""}
                 </Text>
               </View>

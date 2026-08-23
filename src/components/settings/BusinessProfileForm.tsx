@@ -149,7 +149,7 @@ export default function BusinessProfileForm({ existing, onBack, onSave }: Props)
                   },
                 ]}
               >
-                <Text style={{ color: type === t ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 14 }}>
+                <Text style={{ color: type === t ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>
                   {t === "individual" ? "Individual" : "Registered Company"}
                 </Text>
               </Pressable>
@@ -246,12 +246,12 @@ export default function BusinessProfileForm({ existing, onBack, onSave }: Props)
             <View style={styles.row}>
               <Pressable style={[styles.uploadMini, { backgroundColor: colors.bgAlt, borderColor: colors.border }]}>
                 <Feather name="upload" size={16} color={colors.inkMuted} />
-                <Text style={{ fontSize: 12, color: colors.inkMuted, fontFamily: fontFamilies.body, marginLeft: spacing(2) }}>ID Front</Text>
+                <Text style={{ fontSize: 13, color: colors.inkMuted, fontFamily: fontFamilies.body, marginLeft: spacing(2) }}>ID Front</Text>
               </Pressable>
               <View style={{ width: spacing(3) }} />
               <Pressable style={[styles.uploadMini, { backgroundColor: colors.bgAlt, borderColor: colors.border }]}>
                 <Feather name="upload" size={16} color={colors.inkMuted} />
-                <Text style={{ fontSize: 12, color: colors.inkMuted, fontFamily: fontFamilies.body, marginLeft: spacing(2) }}>ID Back</Text>
+                <Text style={{ fontSize: 13, color: colors.inkMuted, fontFamily: fontFamilies.body, marginLeft: spacing(2) }}>ID Back</Text>
               </Pressable>
             </View>
           </View>
@@ -259,7 +259,7 @@ export default function BusinessProfileForm({ existing, onBack, onSave }: Props)
         {type === "company" && (
           <Pressable onPress={addExecutive} style={[styles.addTierBtn, { borderColor: colors.gold }]}>
             <Feather name="plus" size={16} color={colors.gold} />
-            <Text style={{ color: colors.gold, fontFamily: fontFamilies.bodySemi, fontSize: 14 }}>Add Executive</Text>
+            <Text style={{ color: colors.gold, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>Add Executive</Text>
           </Pressable>
         )}
 
@@ -282,7 +282,7 @@ export default function BusinessProfileForm({ existing, onBack, onSave }: Props)
                       onPress={() => updateDocument(doc.id, "type", opt.key)}
                       style={[styles.selectChip, { backgroundColor: doc.type === opt.key ? colors.gold : "transparent" }]}
                     >
-                      <Text style={{ fontSize: 11, color: doc.type === opt.key ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi }}>{opt.label}</Text>
+                      <Text style={{ fontSize: 12, color: doc.type === opt.key ? colors.black : colors.ink, fontFamily: fontFamilies.bodySemi }}>{opt.label}</Text>
                     </Pressable>
                   ))}
                 </View>
@@ -293,13 +293,13 @@ export default function BusinessProfileForm({ existing, onBack, onSave }: Props)
             </FormField>
             <Pressable style={[styles.uploadBoxSmall, { backgroundColor: colors.bgAlt, borderColor: colors.border }]}>
               <Feather name="file-plus" size={20} color={colors.inkMuted} />
-              <Text style={{ fontSize: 13, color: colors.inkMuted, fontFamily: fontFamilies.body, marginTop: spacing(1) }}>Tap to upload document</Text>
+              <Text style={{ fontSize: 14, color: colors.inkMuted, fontFamily: fontFamilies.body, marginTop: spacing(1) }}>Tap to upload document</Text>
             </Pressable>
           </View>
         ))}
         <Pressable onPress={addDocument} style={[styles.addTierBtn, { borderColor: colors.gold }]}>
           <Feather name="plus" size={16} color={colors.gold} />
-          <Text style={{ color: colors.gold, fontFamily: fontFamilies.bodySemi, fontSize: 14 }}>Add Document</Text>
+          <Text style={{ color: colors.gold, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>Add Document</Text>
         </Pressable>
 
         {/* Save */}
@@ -335,32 +335,32 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
 
   card: { borderRadius: radii.xl, padding: spacing(4), gap: spacing(3) },
-  sectionLabel: { fontSize: 14, marginBottom: spacing(2), marginTop: spacing(2) },
-  label: { fontSize: 13 },
+  sectionLabel: { fontSize: 15, marginBottom: spacing(2), marginTop: spacing(2) },
+  label: { fontSize: 14 },
 
   typeToggle: { flexDirection: "row", gap: spacing(2) },
   typeBtn: { flex: 1, paddingVertical: spacing(2.5), borderRadius: radii.lg, borderWidth: 1.5, alignItems: "center" },
 
   row: { flexDirection: "row", alignItems: "flex-start" },
   input: {
-    height: 46,
+    height: 48,
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing(4),
-    fontSize: 14,
+    fontSize: 15,
   },
   textarea: {
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3),
-    fontSize: 14,
+    fontSize: 15,
     minHeight: 100,
     textAlignVertical: "top",
   },
 
   execHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  execTitle: { fontSize: 14 },
+  execTitle: { fontSize: 15 },
 
   uploadMini: {
     flex: 1,

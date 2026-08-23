@@ -1,14 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   useWindowDimensions,
   View,
-  Platform,
 } from "react-native";
 import { useLumTheme } from "../../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../../theme/tokens";
@@ -22,6 +21,32 @@ interface PayMethod {
   name: string;
   icon: keyof typeof Feather.glyphMap;
   enabled: boolean;
+}
+
+/* ------------------------------------------------------------------ */
+// Toggle — same as Settings.tsx
+/* ------------------------------------------------------------------ */
+function Toggle({ value, onValueChange }: { value: boolean; onValueChange: (v: boolean) => void }) {
+  const { colors } = useLumTheme();
+  return (
+    <Pressable
+      onPress={() => onValueChange(!value)}
+      style={[
+        styles.toggleTrack,
+        { backgroundColor: value ? colors.gold : colors.border },
+      ]}
+    >
+      <View
+        style={[
+          styles.toggleThumb,
+          {
+            backgroundColor: colors.white,
+            transform: [{ translateX: value ? 20 : 0 }],
+          },
+        ]}
+      />
+    </Pressable>
+  );
 }
 
 export default function PaymentMethodsPage({ onBack }: Props) {
@@ -45,7 +70,9 @@ export default function PaymentMethodsPage({ onBack }: Props) {
         <Pressable onPress={onBack} style={styles.backBtn}>
           <Feather name="arrow-left" size={24} color={colors.ink} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>Accepted Payment Methods</Text>
+        <Text style={[styles.headerTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+          Accepted Payment Methods
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -56,7 +83,12 @@ export default function PaymentMethodsPage({ onBack }: Props) {
           paddingBottom: isDesktop ? spacing(12) : spacing(24),
         }}
       >
-        <Text style={[styles.hint, { color: colors.inkMuted, fontFamily: fontFamilies.body, marginBottom: spacing(4) }]}>
+        <Text
+          style={[
+            styles.hint,
+            { color: colors.inkMuted, fontFamily: fontFamilies.body, marginBottom: spacing(4) },
+          ]}
+        >
           Choose which payment methods your customers can use when buying tickets from you.
         </Text>
 
@@ -70,20 +102,27 @@ export default function PaymentMethodsPage({ onBack }: Props) {
               ]}
             >
               <View style={[styles.iconWrap, { backgroundColor: colors.bgAlt }]}>
-                <Feather name={method.icon} size={18} color={colors.ink} />
+                <Feather name={method.icon} size={20} color={colors.ink} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>{method.name}</Text>
-                <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body, fontSize: 12, marginTop: 2 }}>
+                <Text
+                  style={[
+                    styles.methodName,
+                    { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                  ]}
+                >
+                  {method.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.methodStatus,
+                    { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                  ]}
+                >
                   {method.enabled ? "Active" : "Disabled"}
                 </Text>
               </View>
-              <Switch
-                value={method.enabled}
-                onValueChange={() => toggle(method.id)}
-                trackColor={{ false: colors.border, true: colors.gold }}
-                thumbColor={colors.white}
-              />
+              <Toggle value={method.enabled} onValueChange={() => toggle(method.id)} />
             </View>
           ))}
         </View>
@@ -105,8 +144,11 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  hint: { fontSize: 13, lineHeight: 20 },
+
+  hint: { fontSize: 15, lineHeight: 22 },
+
   card: { borderRadius: radii.xl, overflow: "hidden" },
+
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -114,5 +156,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3.5),
   },
-  iconWrap: { width: 40, height: 40, borderRadius: radii.lg, alignItems: "center", justifyContent: "center" },
+  iconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  methodName: { fontSize: 15 },
+  methodStatus: { fontSize: 13, marginTop: 2 },
+
+  toggleTrack: {
+    width: 48,
+    height: 28,
+    borderRadius: 14,
+    padding: 2,
+    justifyContent: "center",
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
 });

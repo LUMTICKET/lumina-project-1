@@ -1,14 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    useWindowDimensions,
-    View,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useLumTheme } from "../../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../../theme/tokens";
@@ -140,7 +140,12 @@ export default function VenueDetailsPage({ onBack }: Props) {
             </FormField>
           </View>
 
-          <Text style={[styles.sectionLabel, { color: colors.ink, fontFamily: fontFamilies.bodySemi, marginTop: spacing(2) }]}>
+          <Text
+            style={[
+              styles.sectionLabel,
+              { color: colors.ink, fontFamily: fontFamilies.bodySemi, marginTop: spacing(2) },
+            ]}
+          >
             GPS Coordinates (optional)
           </Text>
           <View style={styles.row}>
@@ -171,7 +176,7 @@ export default function VenueDetailsPage({ onBack }: Props) {
             onPress={handleSave}
             style={[styles.saveBtn, { backgroundColor: colors.gold, marginTop: spacing(2) }]}
           >
-            <Text style={{ color: colors.black, fontFamily: fontFamilies.bodySemi, fontSize: 15 }}>
+            <Text style={{ color: colors.black, fontFamily: fontFamilies.bodySemi, fontSize: 16 }}>
               Save Location
             </Text>
           </Pressable>
@@ -203,20 +208,26 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: "700" },
   backBtn: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
-  hint: { fontSize: 13, lineHeight: 20, marginBottom: spacing(4) },
+
+  hint: { fontSize: 15, lineHeight: 22, marginBottom: spacing(4) },
+
   card: { borderRadius: radii.xl, padding: spacing(5) },
-  label: { fontSize: 13 },
-  sectionLabel: { fontSize: 14, marginBottom: spacing(1) },
+
+  label: { fontSize: 14 },
+  sectionLabel: { fontSize: 15, marginBottom: spacing(1) },
+
   row: { flexDirection: "row", alignItems: "flex-start" },
+
   input: {
-    height: 46,
+    height: 48,
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing(4),
-    fontSize: 14,
+    fontSize: 15,
   },
+
   saveBtn: {
-    paddingVertical: spacing(3.5),
+    paddingVertical: spacing(4),
     borderRadius: radii.full,
     alignItems: "center",
   },

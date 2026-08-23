@@ -1,29 +1,29 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   useWindowDimensions,
   View,
-  Platform,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 import { BusinessProfile } from "./settings/types";
 
 // Sub-pages
-import BusinessProfilePage from "./settings/BusinessProfilePage";
-import BusinessProfileForm from "./settings/BusinessProfileForm";
-import VenueDetailsPage from "./settings/VenueDetailsPage";
-import BusinessHoursPage from "./settings/BusinessHoursPage";
-import VerifiedDevicesPage from "./settings/VerifiedDevicesPage";
-import TeamRolesPage from "./settings/TeamRolesPage";
 import ApprovalWorkflowPage from "./settings/ApprovalWorkflowPage";
 import AuditLogsPage from "./settings/AuditLogsPage";
+import BusinessHoursPage from "./settings/BusinessHoursPage";
+import BusinessProfileForm from "./settings/BusinessProfileForm";
+import BusinessProfilePage from "./settings/BusinessProfilePage";
 import PaymentMethodsPage from "./settings/PaymentMethodsPage";
 import PayoutSchedulePage from "./settings/PayoutSchedulePage";
+import TeamRolesPage from "./settings/TeamRolesPage";
+import VenueDetailsPage from "./settings/VenueDetailsPage";
+import VerifiedDevicesPage from "./settings/VerifiedDevicesPage";
 
 /* ------------------------------------------------------------------ */
 // Toggle
@@ -84,7 +84,7 @@ const SECTIONS: SettingSection[] = [
     title: "Business",
     items: [
       { icon: "briefcase", label: "Business profile", route: "business_profile" },
-      { icon: "map-pin", label: "Venue details", route: "venue_details" },
+      { icon: "map-pin", label: "location details", route: "venue_details" },
       { icon: "clock", label: "Business hours", route: "business_hours" },
     ],
   },

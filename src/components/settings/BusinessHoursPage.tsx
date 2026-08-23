@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,7 +10,6 @@ import {
   TextInput,
   useWindowDimensions,
   View,
-  Platform,
 } from "react-native";
 import { useLumTheme } from "../../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../../theme/tokens";

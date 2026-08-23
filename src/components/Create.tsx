@@ -45,6 +45,14 @@ interface CategoryMeta {
   desc: string;
 }
 
+interface RecentTicket {
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  status: "published" | "draft";
+}
+
 /* ------------------------------------------------------------------ */
 // Config
 /* ------------------------------------------------------------------ */
@@ -56,6 +64,13 @@ const CATEGORIES: CategoryMeta[] = [
   { key: "bus", label: "Bus Route", icon: "truck", desc: "Intercity & shuttle services" },
   { key: "flight", label: "Flight", icon: "send", desc: "Domestic & international flights" },
   { key: "tourism", label: "Tourism", icon: "map", desc: "Tours, parks, attractions" },
+];
+
+/* Mock recent tickets — replace with API call */
+const RECENT_TICKETS: RecentTicket[] = [
+  { id: "1", title: "Lilongwe Food Fest", category: "Event", date: "2026-08-20", status: "published" },
+  { id: "2", title: "Blantyre to Mzuzu", category: "Bus Route", date: "2026-08-18", status: "published" },
+  { id: "3", title: "Mulanje Mountain Trek", category: "Tourism", date: "2026-08-15", status: "draft" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -77,6 +92,7 @@ export default function Create() {
   const [screen, setScreen] = useState<CreateScreen>("form");
   const [payMethod, setPayMethod] = useState<PaymentMethod>("tnm");
   const [paying, setPaying] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   /* ---- Category ---- */
   const [activeIndex, setActiveIndex] = useState(0);
@@ -220,12 +236,10 @@ export default function Create() {
 
   const handlePay = () => {
     setPaying(true);
-    // Simulate payment gateway call
     setTimeout(() => {
       setPaying(false);
       setScreen("success");
       console.log("✅ Published after payment:", JSON.stringify(buildPayload(), null, 2));
-      // TODO: POST buildPayload() to your backend
     }, 2200);
   };
 
@@ -244,18 +258,124 @@ export default function Create() {
     setMaxPerUser("5");
     setImageName("");
     setPayMethod("tnm");
+    setShowHistory(false);
     setScreen("form");
   };
 
-  /* ---------------------------------------------------------------- */
-  // Styles helpers
-  /* ---------------------------------------------------------------- */
   const inputBase = {
     color: colors.ink,
     backgroundColor: colors.surface,
     borderColor: colors.border,
     fontFamily: fontFamilies.body,
   };
+
+  /* ---------------------------------------------------------------- */
+  // RENDER: HISTORY
+  /* ---------------------------------------------------------------- */
+  if (showHistory) {
+    return (
+      <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
+        <View
+          style={[
+            styles.header,
+            { backgroundColor: colors.bg, borderBottomColor: colors.border },
+          ]}
+        >
+          <View style={{ width: 40 }} />
+          <Text
+            style={[
+              styles.headerTitle,
+              { color: colors.ink, fontFamily: fontFamilies.display },
+            ]}
+          >
+            Recent Tickets
+          </Text>
+          <Pressable onPress={() => setShowHistory(false)} style={styles.backBtn}>
+            <Feather name="x" size={22} color={colors.ink} />
+          </Pressable>
+        </View>
+
+        <ScrollView
+          contentContainerStyle={{
+            paddingHorizontal: isDesktop ? spacing(8) : spacing(4),
+            paddingTop: spacing(4),
+            paddingBottom: isDesktop ? spacing(12) : spacing(24),
+          }}
+        >
+          {RECENT_TICKETS.map((ticket, i) => (
+            <View
+              key={ticket.id}
+              style={[
+                styles.historyCard,
+                {
+                  backgroundColor: colors.surface,
+                  borderBottomColor: colors.border,
+                },
+                i < RECENT_TICKETS.length - 1 && { borderBottomWidth: 1 },
+              ]}
+            >
+              <View
+                style={[
+                  styles.historyIconWrap,
+                  { backgroundColor: colors.bgAlt },
+                ]}
+              >
+                <Feather
+                  name={ticket.category === "Event" ? "calendar" : ticket.category === "Bus Route" ? "truck" : "map"}
+                  size={20}
+                  color={colors.ink}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={[
+                    styles.historyTitle,
+                    { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                  ]}
+                >
+                  {ticket.title}
+                </Text>
+                <Text
+                  style={[
+                    styles.historyMeta,
+                    { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                  ]}
+                >
+                  {ticket.category} · {ticket.date}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.historyBadge,
+                  {
+                    backgroundColor:
+                      ticket.status === "published"
+                        ? "rgba(5, 150, 105, 0.12)"
+                        : "rgba(217, 119, 6, 0.12)",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.historyBadgeText,
+                    {
+                      color:
+                        ticket.status === "published"
+                          ? "#059669"
+                          : "#D97706",
+                      fontFamily: fontFamilies.bodySemi,
+                    },
+                  ]}
+                >
+                  {ticket.status}
+                </Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
+    );
+  }
 
   /* ---------------------------------------------------------------- */
   // RENDER: CHECKOUT
@@ -576,6 +696,7 @@ export default function Create() {
           { backgroundColor: colors.bg, borderBottomColor: colors.border },
         ]}
       >
+        <View style={{ width: 40 }} />
         <Text
           style={[
             styles.headerTitle,
@@ -584,6 +705,13 @@ export default function Create() {
         >
           Create {CATEGORIES[activeIndex].label}
         </Text>
+        <Pressable
+          onPress={() => setShowHistory(true)}
+          style={styles.historyBtn}
+          hitSlop={8}
+        >
+          <Feather name="clock" size={22} color={colors.ink} />
+        </Pressable>
       </View>
 
       <ScrollView
@@ -966,8 +1094,8 @@ export default function Create() {
                   placeholder="0"
                   placeholderTextColor={colors.inkMuted}
                   value={tier.price}
-                  onChangeText={(v) => updateTier(tier.id, "price", v)}
-                  keyboardType="numeric"
+                  onChangeText={(v) => updateTier(tier.id, "price", v.replace(/\D/g, ""))}
+                  keyboardType={Platform.OS === "web" ? "default" : "numeric"}
                   style={[styles.input, inputBase]}
                 />
               </FormField>
@@ -989,8 +1117,8 @@ export default function Create() {
                   placeholder="0"
                   placeholderTextColor={colors.inkMuted}
                   value={tier.remaining}
-                  onChangeText={(v) => updateTier(tier.id, "remaining", v)}
-                  keyboardType="numeric"
+                  onChangeText={(v) => updateTier(tier.id, "remaining", v.replace(/\D/g, ""))}
+                  keyboardType={Platform.OS === "web" ? "default" : "numeric"}
                   style={[styles.input, inputBase]}
                 />
               </FormField>
@@ -1048,8 +1176,8 @@ export default function Create() {
               placeholder="5"
               placeholderTextColor={colors.inkMuted}
               value={maxPerUser}
-              onChangeText={setMaxPerUser}
-              keyboardType="numeric"
+              onChangeText={(v) => setMaxPerUser(v.replace(/\D/g, ""))}
+              keyboardType={Platform.OS === "web" ? "default" : "numeric"}
               style={[styles.input, inputBase, { width: 120 }]}
             />
           </FormField>
@@ -1119,8 +1247,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     marginTop: Platform.OS === "web" ? 0 : 30,
   },
-  headerTitle: { fontSize: 20, fontWeight: "700" },
+  headerTitle: { fontSize: 20, fontWeight: "700", },
   backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  historyBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -1130,7 +1265,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
 
   sectionLabel: {
-    fontSize: 14,
+    fontSize: 15,
     marginBottom: spacing(2),
     marginTop: spacing(2),
   },
@@ -1151,7 +1286,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
   },
   typeLabel: { fontSize: 15 },
-  typeDesc: { fontSize: 12 },
+  typeDesc: { fontSize: 13 },
 
   uploadBox: {
     borderWidth: 2,
@@ -1171,7 +1306,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   uploadText: { fontSize: 15 },
-  uploadHint: { fontSize: 12 },
+  uploadHint: { fontSize: 13 },
 
   card: {
     borderRadius: radii.xl,
@@ -1181,21 +1316,21 @@ const styles = StyleSheet.create({
 
   row: { flexDirection: "row", alignItems: "flex-start" },
 
-  label: { fontSize: 13 },
+  label: { fontSize: 14 },
 
   input: {
-    height: 46,
+    height: 48,
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing(4),
-    fontSize: 14,
+    fontSize: 15,
   },
   textarea: {
     borderWidth: 1,
     borderRadius: radii.lg,
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3),
-    fontSize: 14,
+    fontSize: 15,
     minHeight: 100,
     textAlignVertical: "top",
   },
@@ -1214,11 +1349,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(1.5),
     borderRadius: radii.full,
   },
-  tagText: { fontSize: 12 },
+  tagText: { fontSize: 13 },
 
   addBtn: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: radii.lg,
     alignItems: "center",
     justifyContent: "center",
@@ -1229,7 +1364,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  tierTitle: { fontSize: 14 },
+  tierTitle: { fontSize: 15 },
 
   addTierBtn: {
     flexDirection: "row",
@@ -1241,7 +1376,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     borderStyle: "dashed",
   },
-  addTierText: { fontSize: 14 },
+  addTierText: { fontSize: 15 },
 
   actions: {
     flexDirection: "row",
@@ -1251,10 +1386,10 @@ const styles = StyleSheet.create({
   },
   publishBtn: {
     paddingHorizontal: spacing(8),
-    paddingVertical: spacing(3.5),
+    paddingVertical: spacing(4),
     borderRadius: radii.full,
   },
-  publishText: { fontSize: 15 },
+  publishText: { fontSize: 16 },
 
   /* ---- Checkout ---- */
   feeCard: {
@@ -1264,9 +1399,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing(2),
   },
-  feeLabel: { fontSize: 14 },
+  feeLabel: { fontSize: 15 },
   feeAmount: { fontSize: 32, fontWeight: "800" },
-  feeHint: { fontSize: 13, textAlign: "center" },
+  feeHint: { fontSize: 14, textAlign: "center" },
 
   payRow: {
     flexDirection: "row",
@@ -1276,16 +1411,16 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderRadius: radii.xl,
   },
-  payIcon: { width: 40, height: 40 },
+  payIcon: { width: 44, height: 44 },
   payIconFallback: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radii.lg,
     alignItems: "center",
     justifyContent: "center",
   },
   payTitle: { fontSize: 15 },
-  paySub: { fontSize: 12, marginTop: 2 },
+  paySub: { fontSize: 13, marginTop: 2 },
 
   radio: {
     width: 22,
@@ -1314,5 +1449,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing(4),
   },
   successTitle: { fontSize: 24, marginBottom: spacing(2) },
-  successSub: { fontSize: 14, textAlign: "center", paddingHorizontal: spacing(6) },
+  successSub: { fontSize: 15, textAlign: "center", paddingHorizontal: spacing(6) },
+
+  /* ---- History ---- */
+  historyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(3),
+    paddingVertical: spacing(3.5),
+    paddingHorizontal: spacing(2),
+  },
+  historyIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.lg,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  historyTitle: { fontSize: 15 },
+  historyMeta: { fontSize: 13, marginTop: 2 },
+  historyBadge: {
+    paddingHorizontal: spacing(2.5),
+    paddingVertical: spacing(1.5),
+    borderRadius: radii.full,
+  },
+  historyBadgeText: { fontSize: 12, textTransform: "capitalize" },
 });

@@ -23,7 +23,7 @@ env:
 
 jobs:
   validate:
-    name: Validate Expo app
+    name: Validate applications
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -38,10 +38,15 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
-          cache-dependency-path: package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
 
       # Keep compatibility drift visible while the existing SDK 57 package
       # mismatches are addressed in a dedicated dependency update.
@@ -57,3 +62,22 @@ jobs:
 
       - name: Export web app
         run: npm run build:web
+
+      - name: Validate backend database schema
+        run: npm run db:validate --prefix backend
+        env:
+          DATABASE_URL: postgresql://lumina:lumina@localhost:5432/lumina?schema=public
+
+      - name: Generate backend database client
+        run: npm run db:generate --prefix backend
+        env:
+          DATABASE_URL: postgresql://lumina:lumina@localhost:5432/lumina?schema=public
+
+      - name: Type-check backend
+        run: npm run typecheck --prefix backend
+
+      - name: Lint backend
+        run: npm run lint --prefix backend
+
+      - name: Build backend
+        run: npm run build --prefix backend

@@ -42,3 +42,6 @@ jobs:
 
       - name: Audit dependency lockfile
         run: npm audit --audit-level=high
+
+      - name: Audit backend dependency lockfile
+        run: npm audit --prefix backend --audit-level=high

@@ -42,6 +42,9 @@ Additional UI features include:
 - **Expo vector icons**
 - **Async Storage**
 - **Video playback** with `expo-video`
+- **Next.js** API backend
+- **PostgreSQL** with Prisma ORM
+- **Zod** API contract validation
 
 ---
 
@@ -57,6 +60,10 @@ lumina-project-1/
 │   ├── components/          # Screen and UI components
 │   ├── hooks/               # Custom hooks
 │   └── theme/               # Theme provider and design tokens
+├── backend/                 # API-only Next.js application
+│   ├── src/app/             # Route Handlers
+│   ├── src/contracts/       # Validated API contracts
+│   └── prisma/              # PostgreSQL data model
 ├── package.json             # Expo app configuration
 ├── tsconfig.json            # TypeScript config
 ├── app.json                 # Expo app manifest
@@ -104,7 +111,8 @@ npm run web
 
 # 📝 Notes
 
-- The current workspace includes the Expo front-end app only.
+- The workspace contains the Expo front end and an API-only Next.js backend.
+- Backend setup and validation commands are documented in backend/README.md.
 - Navigation and screen layout are defined in `src/app/index.tsx` and the component files under `src/components/`.
 - `src/theme/ThemeContext.tsx` supplies colors and theme state across the app.
 

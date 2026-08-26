@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  CANCELLED
+}
+
+model Organizer {
+  id        String   @id @default(cuid())
+  name      String
+  avatarUrl String?
+  events    Event[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Venue {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  latitude  Decimal? @db.Decimal(9, 6)
+  longitude Decimal? @db.Decimal(9, 6)
+  events    Event[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([city])
+}
+
+model Event {
+  id          String       @id @default(cuid())
+  title       String
+  subtitle    String?
+  organizerId String
+  organizer   Organizer    @relation(fields: [organizerId], references: [id])
+  venueId     String
+  venue       Venue        @relation(fields: [venueId], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime?
+  description String
+  imageUrl    String?
+  tags        String[]
+  status      EventStatus  @default(DRAFT)
+  maxPerUser  Int          @default(5)
+  ticketTiers TicketTier[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([status, startsAt])
+  @@index([organizerId])
+  @@index([venueId])
+}
+
+model TicketTier {
+  id         String   @id @default(cuid())
+  eventId    String
+  event      Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name       String
+  priceMinor Int
+  currency   String   @db.Char(3)
+  capacity   Int
+  available  Int
+  perks      String[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([eventId, name])
+  @@index([eventId])
+}

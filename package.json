@@ -48,6 +48,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:lint": "npm --prefix backend run lint",
+    "backend:typecheck": "npm --prefix backend run typecheck",
+    "backend:build": "npm --prefix backend run build",
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "build:web": "expo export -p web"

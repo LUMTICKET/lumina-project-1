@@ -99,7 +99,6 @@ export default function Create() {
   const category = CATEGORIES[activeIndex].key;
   const isBus = category === "bus";
   const isFlight = category === "flight";
-  const isEvent = category === "event";
   const isTourism = category === "tourism";
   const showRoute = isBus || isFlight;
 

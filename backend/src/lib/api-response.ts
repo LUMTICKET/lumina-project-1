@@ -21,7 +21,7 @@ interface ValidationIssue {
 const corsHeaders = {
   "Access-Control-Allow-Origin":
     process.env.EXPO_APP_ORIGIN ?? "http://localhost:8081",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   Vary: "Origin",
 };

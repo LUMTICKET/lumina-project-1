@@ -30,7 +30,6 @@ export const createEventSchema = z
   .object({
     title: z.string().trim().min(3).max(160),
     subtitle: z.string().trim().max(240).optional(),
-    organizerId: z.string().trim().min(1),
     venueId: z.string().trim().min(1),
     startsAt: z.iso.datetime({ offset: true }),
     endsAt: z.iso.datetime({ offset: true }).optional(),
@@ -52,7 +51,6 @@ export const createEventSchema = z
 export const eventListQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
   city: z.string().trim().max(120).optional(),
-  status: eventStatusSchema.default("published"),
   cursor: z.string().trim().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

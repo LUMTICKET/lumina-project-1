@@ -87,7 +87,7 @@ Start Expo:
 npm run start
 ```
 
-The Events Tickets screen reads from the local API. Copy `.env.example` to
+The Events Tickets and Search screens read from the local API. Copy `.env.example` to
 `.env`, then start PostgreSQL and the backend in separate terminals:
 
 ```bash
@@ -155,7 +155,7 @@ The app loads a single landing page and renders one of the route components base
 
 Each route component uses the theme provider for colors and styles, and several screens implement responsive column layouts depending on screen width.
 
-The Expo app now consumes the Next.js API for event discovery. Other travel,
+The Expo app now consumes the Next.js API for event discovery and venue search. Other travel,
 delivery, feed, and creation screens remain staged for backend integration.
 
 

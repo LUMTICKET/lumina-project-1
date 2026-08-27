@@ -1,125 +1,113 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
+  type ImageSourcePropType,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  type ViewStyle,
   useWindowDimensions,
   View,
 } from "react-native";
+import { toEventTicketConfig } from "../api/event-ticket";
+import { type ApiEvent, fetchEvents } from "../api/events";
+import { type ApiVenue, fetchVenues } from "../api/venues";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
+import PaymentPage from "./PaymentPage";
+import TicketConfigPage, {
+  type PurchasePayload,
+  type TicketConfig,
+} from "./TicketConfigPage";
 
-const CATEGORIES = [
-  "Popular Tickets",
-  "Bus Tickets",
-  "Events Tickets",
-  "Tourism Tickets",
-  "Flight Tickets",
+type SearchCategory = "all" | "events" | "venues";
+
+const CATEGORIES: { label: string; value: SearchCategory }[] = [
+  { label: "All", value: "all" },
+  { label: "Events", value: "events" },
+  { label: "Venues", value: "venues" },
 ];
 
-const RESULTS = [
-  {
-    id: "s1",
-    title: "Afrobeat Night Lagos",
-    subtitle: "Eko Hotel \u2022 Dec 15",
-    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop",
-    height: 340,
-    tag: "Events",
-  },
-  {
-    id: "s2",
-    title: "Abuja Express Coach",
-    subtitle: "Daily departures \u2022 MWK 4,500",
-    image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&auto=format&fit=crop",
-    height: 220,
-    tag: "Buses",
-  },
-  {
-    id: "s3",
-    title: "Same-Day Delivery",
-    subtitle: "Lagos to Ibadan \u2022 Live track",
-    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop",
-    height: 300,
-    tag: "Courier",
-  },
-  {
-    id: "s4",
-    title: "Night Garden Fest",
-    subtitle: "Flashback event \u2022 Sold out",
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&auto=format&fit=crop",
-    height: 380,
-    tag: "Events",
-  },
-  {
-    id: "s5",
-    title: "Luxury Bus to Accra",
-    subtitle: "VIP seats \u2022 MWK 25,000",
-    image: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600&auto=format&fit=crop",
-    height: 260,
-    tag: "Buses",
-  },
-  {
-    id: "s6",
-    title: "Package Insurance",
-    subtitle: "Fragile goods \u2022 Full cover",
-    image: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&auto=format&fit=crop",
-    height: 240,
-    tag: "Courier",
-  },
-  {
-    id: "s7",
-    title: "Comedy Central Live",
-    subtitle: "Muson Centre \u2022 Jan 10",
-    image: "https://images.unsplash.com/photo-1503095392237-fc55088350b9?w=600&auto=format&fit=crop",
-    height: 320,
-    tag: "Events",
-  },
-  {
-    id: "s8",
-    title: "Interstate Shuttle",
-    subtitle: "Enugu\u2013PH \u2022 Book now",
-    image: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&auto=format&fit=crop",
-    height: 200,
-    tag: "Buses",
-  },
-  {
-    id: "s9",
-    title: "Food & Wine Expo",
-    subtitle: "Ticket: MWK 10,000",
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&auto=format&fit=crop",
-    height: 360,
-    tag: "Tickets",
-  },
-  {
-    id: "s10",
-    title: "Express Cargo",
-    subtitle: "Bulk delivery \u2022 24h",
-    image: "https://images.unsplash.com/photo-1512909006721-3d6018887383?w=600&auto=format&fit=crop",
-    height: 280,
-    tag: "Courier",
-  },
-  {
-    id: "s11",
-    title: "Jazz Under the Stars",
-    subtitle: "Ikoyi \u2022 Dec 22",
-    image: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=600&auto=format&fit=crop",
-    height: 330,
-    tag: "Events",
-  },
-  {
-    id: "s12",
-    title: "Coastal Route Pass",
-    subtitle: "Lekki\u2013Epe scenic",
-    image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&auto=format&fit=crop",
-    height: 270,
-    tag: "Buses",
-  },
+const VENUE_IMAGES = [
+  require("@/assets/images/event1.jpg"),
+  require("@/assets/images/event4.jpg"),
 ];
+
+interface EventSearchCard {
+  id: string;
+  kind: "event";
+  title: string;
+  subtitle: string;
+  image: ImageSourcePropType;
+  height: number;
+  tag: string;
+  ticket: TicketConfig;
+}
+
+interface VenueSearchCard {
+  id: string;
+  kind: "venue";
+  title: string;
+  subtitle: string;
+  image: ImageSourcePropType;
+  height: number;
+  tag: string;
+  venue: ApiVenue;
+}
+
+type SearchCard = EventSearchCard | VenueSearchCard;
+
+function eventCard(event: ApiEvent, index: number): EventSearchCard {
+  const ticket = toEventTicketConfig(event);
+  const date = new Date(event.startsAt).toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  return {
+    id: `event-${event.id}`,
+    kind: "event",
+    title: event.title,
+    subtitle: `${event.venue.name}, ${event.venue.city} • ${date}`,
+    image: ticket.image,
+    height: 270 + (index % 3) * 35,
+    tag: "Event",
+    ticket,
+  };
+}
+
+function venueCard(venue: ApiVenue, index: number): VenueSearchCard {
+  const eventLabel = venue.eventCount === 1 ? "1 event" : `${venue.eventCount} events`;
+
+  return {
+    id: `venue-${venue.id}`,
+    kind: "venue",
+    title: venue.name,
+    subtitle: `${venue.address}, ${venue.city} • ${eventLabel}`,
+    image: VENUE_IMAGES[index % VENUE_IMAGES.length],
+    height: 235 + (index % 2) * 45,
+    tag: "Venue",
+    venue,
+  };
+}
+
+function combineCards(events: EventSearchCard[], venues: VenueSearchCard[]) {
+  const cards: SearchCard[] = [];
+  const count = Math.max(events.length, venues.length);
+
+  for (let index = 0; index < count; index += 1) {
+    if (events[index]) cards.push(events[index]);
+    if (venues[index]) cards.push(venues[index]);
+  }
+
+  return cards;
+}
 
 interface SearchPageProps {
   onOpenAuth?: () => void;
@@ -130,133 +118,188 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
+  const [selectedCategory, setSelectedCategory] = useState<SearchCategory>("all");
+  const [query, setQuery] = useState("");
+  const [events, setEvents] = useState<ApiEvent[]>([]);
+  const [venues, setVenues] = useState<ApiVenue[]>([]);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
+  const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
+  const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      const search = query.trim() || undefined;
+      const includeEvents = selectedCategory !== "venues";
+      const includeVenues = selectedCategory !== "events";
+
+      void Promise.all([
+        includeEvents
+          ? fetchEvents({ q: search, signal: controller.signal })
+          : Promise.resolve([]),
+        includeVenues
+          ? fetchVenues({ q: search, signal: controller.signal })
+          : Promise.resolve([]),
+      ])
+        .then(([eventResults, venueResults]) => {
+          setEvents(eventResults);
+          setVenues(venueResults);
+          setErrorMessage("");
+          setLoadState("ready");
+        })
+        .catch((error: unknown) => {
+          if (controller.signal.aborted) return;
+          setErrorMessage(
+            error instanceof Error
+              ? error.message
+              : "Search results could not be loaded.",
+          );
+          setLoadState("error");
+        });
+    }, 350);
+
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [query, retryKey, selectedCategory]);
+
+  if (purchasePayload) {
+    return (
+      <PaymentPage
+        payload={purchasePayload}
+        onClose={() => setPurchasePayload(null)}
+        onComplete={() => {
+          setPurchasePayload(null);
+          setSelectedTicket(null);
+        }}
+      />
+    );
+  }
+
+  if (selectedTicket) {
+    return (
+      <TicketConfigPage
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onNavigateToPayment={setPurchasePayload}
+      />
+    );
+  }
 
   let columnCount = 2;
   if (width >= 1400) columnCount = 6;
   else if (width >= 1100) columnCount = 5;
   else if (width >= 768) columnCount = 3;
 
-  const columns = Array.from({ length: columnCount }, () => [] as typeof RESULTS);
-  RESULTS.forEach((pin, index) => {
-    columns[index % columnCount].push(pin);
-  });
-
-  const [selectedCategory, setSelectedCategory] = useState(0);
-  const [query, setQuery] = useState("");
+  const eventCards = events.map(eventCard);
+  const venueCards = venues.map(venueCard);
+  const results =
+    selectedCategory === "events"
+      ? eventCards
+      : selectedCategory === "venues"
+        ? venueCards
+        : combineCards(eventCards, venueCards);
+  const columns: SearchCard[][] = Array.from({ length: columnCount }, () => []);
+  results.forEach((result, index) => columns[index % columnCount].push(result));
 
   const iconOffset = Platform.OS !== "web" ? { marginTop: 20 } : {};
 
+  const updateQuery = (value: string) => {
+    setQuery(value);
+    setLoadState("loading");
+  };
+
+  const selectCategory = (category: SearchCategory) => {
+    setSelectedCategory(category);
+    setLoadState("loading");
+  };
+
+  const openResult = (result: SearchCard) => {
+    if (result.kind === "event") {
+      setSelectedTicket(result.ticket);
+      return;
+    }
+
+    setQuery(result.venue.name);
+    setSelectedCategory("events");
+    setLoadState("loading");
+  };
+
+  const searchInput = (
+    <View
+      style={[
+        styles.searchBar,
+        { backgroundColor: colors.bgAlt, borderColor: colors.border },
+      ]}
+    >
+      <Feather name="search" size={20} color={colors.inkMuted} />
+      <TextInput
+        placeholder="Search events and venues..."
+        placeholderTextColor={colors.inkMuted}
+        value={query}
+        onChangeText={updateQuery}
+        returnKeyType="search"
+        style={[
+          styles.searchInput,
+          { color: colors.ink, fontFamily: fontFamilies.body },
+        ]}
+      />
+      {query.length > 0 && (
+        <Pressable
+          accessibilityLabel="Clear search"
+          onPress={() => updateQuery("")}
+        >
+          <Feather name="x" size={18} color={colors.inkMuted} />
+        </Pressable>
+      )}
+    </View>
+  );
+
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-      {/* Desktop Search Bar */}
       {isDesktop && (
         <View
           style={[
             styles.searchBarWrap,
-            {
-              backgroundColor: colors.bg,
-              borderBottomColor: colors.border,
-            },
+            { backgroundColor: colors.bg, borderBottomColor: colors.border },
             Platform.OS === "web"
-              ? ({ position: "sticky", top: 0, zIndex: 50 } as any)
+              ? ({ position: "sticky", top: 0, zIndex: 50 } as unknown as ViewStyle)
               : {},
           ]}
         >
-          <View style={styles.searchBarInner}>
-            <View
-              style={[
-                styles.searchBar,
-                {
-                  backgroundColor: colors.bgAlt,
-                  borderColor: colors.border,
-                },
-              ]}
-            >
-              <Feather name="search" size={20} color={colors.inkMuted} />
-              <TextInput
-                placeholder="Search events, buses, courier..."
-                placeholderTextColor={colors.inkMuted}
-                value={query}
-                onChangeText={setQuery}
-                style={[
-                  styles.searchInput,
-                  { color: colors.ink, fontFamily: fontFamilies.body },
-                ]}
-              />
-              {query.length > 0 && (
-                <Pressable onPress={() => setQuery("")}>
-                  <Feather name="x" size={18} color={colors.inkMuted} />
-                </Pressable>
-              )}
-            </View>
-          </View>
+          <View style={styles.searchBarInner}>{searchInput}</View>
         </View>
       )}
 
-      {/* Mobile Search + Action Icons */}
       {!isDesktop && (
-        <View style={[styles.mobileSearchWrap, { paddingHorizontal: spacing(3), paddingTop: spacing(3) }]}>
+        <View style={styles.mobileSearchWrap}>
           <View style={styles.mobileActionRow}>
             <Pressable
-              style={[
-                styles.iconBtn,
-                { backgroundColor: colors.bgAlt },
-                iconOffset,
-              ]}
-              onPress={() => onOpenAuth?.()}
+              accessibilityLabel="Open account"
+              style={[styles.iconBtn, { backgroundColor: colors.bgAlt }, iconOffset]}
+              onPress={onOpenAuth}
             >
               <Feather name="user" size={20} color={colors.ink} />
             </Pressable>
-
             <Pressable
-              style={[
-                styles.iconBtn,
-                { backgroundColor: colors.bgAlt },
-                iconOffset,
-              ]}
-              onPress={() => onOpenSettings?.()}
+              accessibilityLabel="Open settings"
+              style={[styles.iconBtn, { backgroundColor: colors.bgAlt }, iconOffset]}
+              onPress={onOpenSettings}
             >
               <Feather name="settings" size={20} color={colors.ink} />
             </Pressable>
           </View>
-
-          <View
-            style={[
-              styles.searchBar,
-              {
-                backgroundColor: colors.bgAlt,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Feather name="search" size={20} color={colors.inkMuted} />
-            <TextInput
-              placeholder="Search events, buses, courier..."
-              placeholderTextColor={colors.inkMuted}
-              value={query}
-              onChangeText={setQuery}
-              style={[
-                styles.searchInput,
-                { color: colors.ink, fontFamily: fontFamilies.body },
-              ]}
-            />
-            {query.length > 0 && (
-              <Pressable onPress={() => setQuery("")}>
-                <Feather name="x" size={18} color={colors.inkMuted} />
-              </Pressable>
-            )}
-          </View>
+          {searchInput}
         </View>
       )}
 
-      {/* Category Pills */}
       <View
         style={[
           styles.pillsWrapper,
-          {
-            backgroundColor: colors.bg,
-            borderBottomColor: colors.border,
-          },
+          { backgroundColor: colors.bg, borderBottomColor: colors.border },
         ]}
       >
         <ScrollView
@@ -264,17 +307,15 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.pillsContent}
         >
-          {CATEGORIES.map((cat, index) => {
-            const isSelected = index === selectedCategory;
+          {CATEGORIES.map((category) => {
+            const isSelected = category.value === selectedCategory;
             return (
               <Pressable
-                key={cat}
-                onPress={() => setSelectedCategory(index)}
+                key={category.value}
+                onPress={() => selectCategory(category.value)}
                 style={[
                   styles.pill,
-                  {
-                    backgroundColor: isSelected ? colors.gold : colors.bgAlt,
-                  },
+                  { backgroundColor: isSelected ? colors.gold : colors.bgAlt },
                 ]}
               >
                 <Text
@@ -286,7 +327,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
                     },
                   ]}
                 >
-                  {cat}
+                  {category.label}
                 </Text>
               </Pressable>
             );
@@ -294,103 +335,132 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
         </ScrollView>
       </View>
 
-      {/* Masonry Results */}
-      <View
-        style={[
-          styles.board,
-          {
-            paddingHorizontal: isDesktop ? spacing(6) : spacing(2),
-            paddingTop: spacing(4),
-            paddingBottom: isDesktop ? spacing(10) : spacing(20),
-          },
-        ]}
-      >
-        {columns.map((column, colIndex) => (
-          <View key={`col-${colIndex}`} style={styles.column}>
-            {column.map((pin) => (
-              <Pressable key={pin.id} style={styles.pinWrap}>
-                <View
-                  style={[
-                    styles.pinCard,
-                    {
-                      backgroundColor: colors.surface,
-                      shadowColor: colors.shadow,
-                    },
-                  ]}
-                >
-                  <View style={styles.imageWrap}>
-                    <Image
-                      source={{ uri: pin.image }}
-                      style={[styles.pinImage, { height: pin.height }]}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.saveOverlay}>
-                      <Pressable
-                        style={[styles.saveBtn, { backgroundColor: colors.gold }]}
-                      >
+      {loadState === "loading" && (
+        <View style={styles.statePanel}>
+          <ActivityIndicator color={colors.gold} size="large" />
+          <Text style={[styles.stateText, { color: colors.inkMuted }]}>Searching…</Text>
+        </View>
+      )}
+
+      {loadState === "error" && (
+        <View style={styles.statePanel}>
+          <Feather name="alert-circle" size={28} color={colors.inkMuted} />
+          <Text style={[styles.stateText, { color: colors.inkMuted }]}>{errorMessage}</Text>
+          <Pressable
+            style={[styles.retryBtn, { backgroundColor: colors.gold }]}
+            onPress={() => {
+              setLoadState("loading");
+              setRetryKey((value) => value + 1);
+            }}
+          >
+            <Text style={[styles.retryText, { color: colors.black }]}>Try again</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {loadState === "ready" && results.length === 0 && (
+        <View style={styles.statePanel}>
+          <Feather name="search" size={28} color={colors.inkMuted} />
+          <Text style={[styles.stateText, { color: colors.inkMuted }]}>
+            No events or venues match your search.
+          </Text>
+        </View>
+      )}
+
+      {loadState === "ready" && results.length > 0 && (
+        <View
+          style={[
+            styles.resultsWrap,
+            {
+              paddingHorizontal: isDesktop ? spacing(6) : spacing(2),
+              paddingBottom: isDesktop ? spacing(10) : spacing(20),
+            },
+          ]}
+        >
+          <Text style={[styles.resultCount, { color: colors.inkMuted }]}>
+            {results.length} {results.length === 1 ? "result" : "results"}
+          </Text>
+          <View style={styles.board}>
+            {columns.map((column, columnIndex) => (
+              <View key={`col-${columnIndex}`} style={styles.column}>
+                {column.map((result) => (
+                  <Pressable
+                    key={result.id}
+                    style={styles.pinWrap}
+                    onPress={() => openResult(result)}
+                  >
+                    <View
+                      style={[
+                        styles.pinCard,
+                        { backgroundColor: colors.surface, shadowColor: colors.shadow },
+                      ]}
+                    >
+                      <View style={styles.imageWrap}>
+                        <Image
+                          source={result.image}
+                          style={[styles.pinImage, { height: result.height }]}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.actionOverlay}>
+                          <View style={[styles.actionBtn, { backgroundColor: colors.gold }]}>
+                            <Text
+                              style={[
+                                styles.actionText,
+                                { color: colors.white, fontFamily: fontFamilies.bodySemi },
+                              ]}
+                            >
+                              {result.kind === "event" ? "Tickets" : "View events"}
+                            </Text>
+                          </View>
+                        </View>
+                        <View
+                          style={[styles.tagPill, { backgroundColor: colors.black + "CC" }]}
+                        >
+                          <Text style={[styles.tagText, { color: colors.white }]}>
+                            {result.tag}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.pinBody}>
                         <Text
                           style={[
-                            styles.saveText,
-                            {
-                              color: colors.white,
-                              fontFamily: fontFamilies.bodySemi,
-                            },
+                            styles.pinTitle,
+                            { color: colors.ink, fontFamily: fontFamilies.display },
                           ]}
+                          numberOfLines={2}
                         >
-                          Book
+                          {result.title}
                         </Text>
-                      </Pressable>
+                        <Text
+                          style={[
+                            styles.pinSubtitle,
+                            { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                          ]}
+                          numberOfLines={2}
+                        >
+                          {result.subtitle}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={[styles.tagPill, { backgroundColor: colors.black + "CC" }]}>
-                      <Text style={[styles.tagText, { color: colors.white }]}>
-                        {pin.tag}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.pinBody}>
-                    <Text
-                      style={[
-                        styles.pinTitle,
-                        { color: colors.ink, fontFamily: fontFamilies.display },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {pin.title}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.pinSubtitle,
-                        { color: colors.inkMuted, fontFamily: fontFamilies.body },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {pin.subtitle}
-                    </Text>
-                  </View>
-                </View>
-              </Pressable>
+                  </Pressable>
+                ))}
+              </View>
             ))}
           </View>
-        ))}
-      </View>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    width: "100%",
-  },
+  wrap: { width: "100%", minHeight: "100%" },
   searchBarWrap: {
     borderBottomWidth: 1,
     paddingVertical: spacing(3),
     paddingHorizontal: spacing(6),
   },
-  searchBarInner: {
-    maxWidth: 800,
-    width: "100%",
-    alignSelf: "center",
-  },
+  searchBarInner: { maxWidth: 800, width: "100%", alignSelf: "center" },
   searchBar: {
     height: 52,
     borderRadius: radii.full,
@@ -400,13 +470,10 @@ const styles = StyleSheet.create({
     gap: 10,
     borderWidth: 1,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    height: "100%",
-    paddingVertical: 0,
-  },
+  searchInput: { flex: 1, fontSize: 16, height: "100%", paddingVertical: 0 },
   mobileSearchWrap: {
+    paddingHorizontal: spacing(3),
+    paddingTop: spacing(3),
     paddingBottom: spacing(2),
     gap: spacing(2.5),
   },
@@ -423,10 +490,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  pillsWrapper: {
-    borderBottomWidth: 1,
-    paddingVertical: spacing(3),
-  },
+  pillsWrapper: { borderBottomWidth: 1, paddingVertical: spacing(3) },
   pillsContent: {
     paddingHorizontal: spacing(3),
     gap: spacing(2),
@@ -438,8 +502,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(2.5),
     borderRadius: radii.full,
   },
-  pillText: {
-    fontSize: 14,
+  pillText: { fontSize: 14 },
+  resultsWrap: { paddingTop: spacing(3), width: "100%" },
+  resultCount: {
+    maxWidth: 1600,
+    width: "100%",
+    alignSelf: "center",
+    fontSize: 13,
+    marginBottom: spacing(3),
   },
   board: {
     flexDirection: "row",
@@ -449,13 +519,8 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     width: "100%",
   },
-  column: {
-    flex: 1,
-    gap: spacing(3),
-  },
-  pinWrap: {
-    width: "100%",
-  },
+  column: { flex: 1, gap: spacing(3) },
+  pinWrap: { width: "100%" },
   pinCard: {
     borderRadius: radii.xl,
     overflow: "hidden",
@@ -464,15 +529,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
-  imageWrap: {
-    position: "relative",
-    width: "100%",
-  },
-  pinImage: {
-    width: "100%",
-    borderBottomWidth: 1,
-  },
-  saveOverlay: {
+  imageWrap: { position: "relative", width: "100%" },
+  pinImage: { width: "100%", borderBottomWidth: 1 },
+  actionOverlay: {
     position: "absolute",
     top: 0,
     left: 0,
@@ -482,7 +541,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     padding: spacing(3),
   },
-  saveBtn: {
+  actionBtn: {
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(2),
     borderRadius: radii.full,
@@ -491,9 +550,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  saveText: {
-    fontSize: 13,
-  },
+  actionText: { fontSize: 13 },
   tagPill: {
     position: "absolute",
     bottom: spacing(2),
@@ -502,19 +559,22 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(1),
     borderRadius: radii.full,
   },
-  tagText: {
-    fontSize: 11,
-    fontWeight: "600",
+  tagText: { fontSize: 11, fontWeight: "600" },
+  pinBody: { padding: spacing(3), gap: 3 },
+  pinTitle: { fontSize: 14, lineHeight: 18 },
+  pinSubtitle: { fontSize: 12, lineHeight: 17 },
+  statePanel: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing(3),
+    minHeight: 320,
+    padding: spacing(6),
   },
-  pinBody: {
-    padding: spacing(3),
-    gap: 3,
+  stateText: { fontSize: 14, textAlign: "center" },
+  retryBtn: {
+    borderRadius: radii.full,
+    paddingHorizontal: spacing(5),
+    paddingVertical: spacing(2.5),
   },
-  pinTitle: {
-    fontSize: 14,
-    lineHeight: 18,
-  },
-  pinSubtitle: {
-    fontSize: 12,
-  },
+  retryText: { fontSize: 13, fontFamily: fontFamilies.bodySemi },
 });

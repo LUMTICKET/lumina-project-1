@@ -48,7 +48,7 @@ interface ApiFailure {
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api/v1";
 
-async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
     headers: { Accept: "application/json" },
     signal,
@@ -62,8 +62,19 @@ async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   return payload.data;
 }
 
-export function fetchEvents(signal?: AbortSignal) {
-  return getJson<ApiEvent[]>("/events", signal);
+interface EventQuery {
+  q?: string;
+  city?: string;
+  signal?: AbortSignal;
+}
+
+export function fetchEvents({ q, city, signal }: EventQuery = {}) {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  if (city) params.set("city", city);
+  const query = params.toString();
+
+  return getJson<ApiEvent[]>(`/events${query ? `?${query}` : ""}`, signal);
 }
 
 export function fetchEventById(eventId: string, signal?: AbortSignal) {

@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -13,6 +14,8 @@ import {
   View,
 } from "react-native";
 import { useState } from "react";
+import type { AccountType } from "../api/auth";
+import { useAuth } from "../auth/AuthContext";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 
@@ -22,13 +25,16 @@ interface AuthModalProps {
   visible: boolean;
   onClose: () => void;
   initialMode?: AuthMode;
+  initialAccountType?: AccountType;
 }
 
 export default function AuthModal({
   visible,
   onClose,
   initialMode = "signup",
+  initialAccountType = "customer",
 }: AuthModalProps) {
+  const auth = useAuth();
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
@@ -39,6 +45,9 @@ export default function AuthModal({
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [accountType, setAccountType] = useState<AccountType>(initialAccountType);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const isSignup = mode === "signup";
 
@@ -47,6 +56,30 @@ export default function AuthModal({
     setEmail("");
     setPassword("");
     setName("");
+    setErrorMessage("");
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      if (isSignup) {
+        await auth.register(name, email, password, accountType);
+      } else {
+        await auth.login(email, password);
+      }
+      setEmail("");
+      setPassword("");
+      setName("");
+      onClose();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Authentication failed.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const cardPadding = isDesktop ? spacing(6) : isSmallPhone ? spacing(4) : spacing(5);
@@ -136,11 +169,13 @@ export default function AuthModal({
 
                 {/* Google */}
                 <Pressable
+                  disabled
                   style={[
                     styles.socialBtn,
                     {
                       backgroundColor: colors.bgAlt,
                       borderColor: colors.border,
+                      opacity: 0.55,
                     },
                   ]}
                 >
@@ -154,7 +189,7 @@ export default function AuthModal({
                       { color: colors.ink, fontFamily: fontFamilies.bodySemi },
                     ]}
                   >
-                    Continue with Google
+                    Google sign-in not configured
                   </Text>
                 </Pressable>
 
@@ -178,27 +213,57 @@ export default function AuthModal({
 
                 {/* Form */}
                 {isSignup && (
-                  <View
-                    style={[
-                      styles.inputWrap,
-                      {
-                        backgroundColor: colors.bgAlt,
-                        borderColor: colors.border,
-                      },
-                    ]}
-                  >
-                    <Feather name="user" size={18} color={colors.inkMuted} />
-                    <TextInput
-                      placeholder="Full name"
-                      placeholderTextColor={colors.inkMuted}
-                      value={name}
-                      onChangeText={setName}
+                  <>
+                    <View
                       style={[
-                        styles.input,
-                        { color: colors.ink, fontFamily: fontFamilies.body },
+                        styles.inputWrap,
+                        {
+                          backgroundColor: colors.bgAlt,
+                          borderColor: colors.border,
+                        },
                       ]}
-                    />
-                  </View>
+                    >
+                      <Feather name="user" size={18} color={colors.inkMuted} />
+                      <TextInput
+                        placeholder="Full name"
+                        placeholderTextColor={colors.inkMuted}
+                        value={name}
+                        onChangeText={setName}
+                        style={[
+                          styles.input,
+                          { color: colors.ink, fontFamily: fontFamilies.body },
+                        ]}
+                      />
+                    </View>
+                    <View style={styles.accountTypeRow}>
+                      {(["customer", "organizer"] as const).map((type) => {
+                        const selected = type === accountType;
+                        return (
+                          <Pressable
+                            key={type}
+                            onPress={() => setAccountType(type)}
+                            style={[
+                              styles.accountTypeBtn,
+                              {
+                                backgroundColor: selected ? colors.gold : colors.bgAlt,
+                                borderColor: selected ? colors.gold : colors.border,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={{
+                                color: selected ? colors.black : colors.ink,
+                                fontFamily: fontFamilies.bodySemi,
+                                textTransform: "capitalize",
+                              }}
+                            >
+                              {type}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </>
                 )}
 
                 <View
@@ -256,20 +321,31 @@ export default function AuthModal({
                 </View>
 
                 {/* Submit */}
+                {!!errorMessage && (
+                  <Text style={[styles.errorText, { color: "#DC2626" }]}>
+                    {errorMessage}
+                  </Text>
+                )}
                 <Pressable
+                  onPress={handleSubmit}
+                  disabled={submitting}
                   style={[
                     styles.submitBtn,
-                    { backgroundColor: colors.gold },
+                    { backgroundColor: colors.gold, opacity: submitting ? 0.65 : 1 },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.submitText,
-                      { color: colors.white, fontFamily: fontFamilies.bodySemi },
-                    ]}
-                  >
-                    {isSignup ? "Create account" : "Log in"}
-                  </Text>
+                  {submitting ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.submitText,
+                        { color: colors.white, fontFamily: fontFamilies.bodySemi },
+                      ]}
+                    >
+                      {isSignup ? "Create account" : "Log in"}
+                    </Text>
+                  )}
                 </Pressable>
 
                 {/* Toggle */}
@@ -437,6 +513,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     height: "100%",
     minWidth: 0,
+  },
+  accountTypeRow: {
+    flexDirection: "row",
+    gap: spacing(2),
+    marginBottom: spacing(2.5),
+  },
+  accountTypeBtn: {
+    flex: 1,
+    height: 42,
+    borderRadius: radii.full,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorText: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: spacing(2),
+    textAlign: "center",
   },
   submitBtn: {
     height: 48,

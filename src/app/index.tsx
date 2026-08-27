@@ -7,13 +7,14 @@ import HomePage from "../components/HomePage";
 import Messaging from "../components/Messaging";
 import Navbar from "../components/Navbar";
 import SearchPage from "../components/SearchPage";
+import type { AccountType } from "../api/auth";
 import { useLumTheme } from "../theme/ThemeContext";
 
 import Settings from "../components/Settings";
 
 type RouteName = "Home" | "Search" | "Create" | "Messaging" | "Feeds" | "Settings";
 type PageProps = {
-  onOpenAuth?: () => void;
+  onOpenAuth?: (accountType?: AccountType) => void;
   onOpenSettings?: () => void;
 };
 
@@ -33,13 +34,21 @@ export default function LandingPage() {
 
   const [currentRoute, setCurrentRoute] = useState<RouteName>("Home");
   const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [authAccountType, setAuthAccountType] = useState<AccountType>("customer");
   const PageComponent = ROUTES[currentRoute];
+
+  const openAuth = (accountType: AccountType = "customer") => {
+    setAuthAccountType(accountType);
+    setAuthModalVisible(true);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
       <AuthModal
+        key={authAccountType}
         visible={authModalVisible}
         onClose={() => setAuthModalVisible(false)}
+        initialAccountType={authAccountType}
       />
 
       <Navbar currentRoute={currentRoute} onNavigate={setCurrentRoute} />
@@ -56,7 +65,7 @@ export default function LandingPage() {
         showsVerticalScrollIndicator={false}
       >
         <PageComponent
-          onOpenAuth={() => setAuthModalVisible(true)}
+          onOpenAuth={openAuth}
           onOpenSettings={() => setCurrentRoute("Settings")}
         />
       </ScrollView>

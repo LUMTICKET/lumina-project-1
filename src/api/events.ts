@@ -1,3 +1,5 @@
+import { apiRequest } from "./client";
+
 export interface ApiTicketTier {
   id: string;
   name: string;
@@ -35,31 +37,8 @@ export interface ApiEvent {
   ticketTiers: ApiTicketTier[];
 }
 
-interface ApiSuccess<T> {
-  data: T;
-}
-
-interface ApiFailure {
-  error?: {
-    message?: string;
-  };
-}
-
-const API_URL =
-  process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000/api/v1";
-
 export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    headers: { Accept: "application/json" },
-    signal,
-  });
-  const payload = (await response.json()) as ApiSuccess<T> & ApiFailure;
-
-  if (!response.ok) {
-    throw new Error(payload.error?.message ?? "The request could not be completed.");
-  }
-
-  return payload.data;
+  return apiRequest<T>(path, { signal });
 }
 
 interface EventQuery {

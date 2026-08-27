@@ -1,4 +1,4 @@
-import { getJson } from "./events";
+import { apiRequest } from "./client";
 
 export interface ApiVenue {
   id: string;
@@ -22,9 +22,9 @@ export function fetchVenues({ q, city, signal }: VenueQuery = {}) {
   if (city) params.set("city", city);
   const query = params.toString();
 
-  return getJson<ApiVenue[]>(`/venues${query ? `?${query}` : ""}`, signal);
+  return apiRequest<ApiVenue[]>(`/venues${query ? `?${query}` : ""}`, { signal });
 }
 
 export function fetchVenueById(venueId: string, signal?: AbortSignal) {
-  return getJson<ApiVenue>(`/venues/${encodeURIComponent(venueId)}`, signal);
+  return apiRequest<ApiVenue>(`/venues/${encodeURIComponent(venueId)}`, { signal });
 }

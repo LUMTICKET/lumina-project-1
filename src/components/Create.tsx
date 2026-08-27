@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -14,6 +14,15 @@ import {
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
+import type { AccountType } from "../api/auth";
+import type { ApiEvent } from "../api/events";
+import {
+  createEventDraft,
+  fetchOrganizerEvents,
+  submitEventDraft,
+} from "../api/organizer-events";
+import { fetchVenues, type ApiVenue } from "../api/venues";
+import { useAuth } from "../auth/AuthContext";
 
 /* ------------------------------------------------------------------ */
 // Types
@@ -45,14 +54,6 @@ interface CategoryMeta {
   desc: string;
 }
 
-interface RecentTicket {
-  id: string;
-  title: string;
-  category: string;
-  date: string;
-  status: "published" | "draft";
-}
-
 /* ------------------------------------------------------------------ */
 // Config
 /* ------------------------------------------------------------------ */
@@ -66,13 +67,6 @@ const CATEGORIES: CategoryMeta[] = [
   { key: "tourism", label: "Tourism", icon: "map", desc: "Tours, parks, attractions" },
 ];
 
-/* Mock recent tickets — replace with API call */
-const RECENT_TICKETS: RecentTicket[] = [
-  { id: "1", title: "Lilongwe Food Fest", category: "Event", date: "2026-08-20", status: "published" },
-  { id: "2", title: "Blantyre to Mzuzu", category: "Bus Route", date: "2026-08-18", status: "published" },
-  { id: "3", title: "Mulanje Mountain Trek", category: "Tourism", date: "2026-08-15", status: "draft" },
-];
-
 /* ------------------------------------------------------------------ */
 // Helpers
 /* ------------------------------------------------------------------ */
@@ -80,11 +74,36 @@ function makeId() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+function parseEventStart(date: string, time: string) {
+  const dateMatch = date.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const timeMatch = time.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+  if (!dateMatch || !timeMatch) return null;
+
+  let hour = Number(timeMatch[1]);
+  const minute = Number(timeMatch[2]);
+  const meridiem = timeMatch[3]?.toUpperCase();
+  if (minute > 59 || (meridiem ? hour < 1 || hour > 12 : hour > 23)) return null;
+  if (meridiem) {
+    hour %= 12;
+    if (meridiem === "PM") hour += 12;
+  }
+
+  const parsed = new Date(
+    `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00+02:00`,
+  );
+  return Number.isNaN(parsed.valueOf()) ? null : parsed.toISOString();
+}
+
 /* ------------------------------------------------------------------ */
 // Main Component
 /* ------------------------------------------------------------------ */
-export default function Create() {
+export default function Create({
+  onOpenAuth,
+}: {
+  onOpenAuth?: (accountType?: AccountType) => void;
+}) {
   const { colors } = useLumTheme();
+  const auth = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
 
@@ -93,6 +112,13 @@ export default function Create() {
   const [payMethod, setPayMethod] = useState<PaymentMethod>("tnm");
   const [paying, setPaying] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [createdEvent, setCreatedEvent] = useState<ApiEvent | null>(null);
+  const [recentEvents, setRecentEvents] = useState<ApiEvent[]>([]);
+  const [venues, setVenues] = useState<ApiVenue[]>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState("");
 
   /* ---- Category ---- */
   const [activeIndex, setActiveIndex] = useState(0);
@@ -106,7 +132,7 @@ export default function Create() {
   const [imageName, setImageName] = useState("");
   const [title, setTitle] = useState("");
   const [subtitle, setSubtitle] = useState("");
-  const [organizer, setOrganizer] = useState("");
+  const organizer = auth.user?.organizer?.name ?? "";
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [location, setLocation] = useState("");
@@ -123,6 +149,27 @@ export default function Create() {
     { id: makeId(), name: "", price: "", currency: "MWK", perks: "", remaining: "" },
   ]);
   const [maxPerUser, setMaxPerUser] = useState("5");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchVenues({ signal: controller.signal })
+      .then((items) => setVenues(items))
+      .catch(() => {
+        if (!controller.signal.aborted) setFormError("Venues could not be loaded.");
+      });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    if (!auth.token || auth.user?.role !== "organizer") return;
+    const controller = new AbortController();
+    void fetchOrganizerEvents(auth.token, controller.signal)
+      .then(setRecentEvents)
+      .catch(() => {
+        if (!controller.signal.aborted) setFormError("Your event drafts could not be loaded.");
+      });
+    return () => controller.abort();
+  }, [auth.token, auth.user?.role]);
 
   /* ---------------------------------------------------------------- */
   // Dynamic labels
@@ -228,9 +275,94 @@ export default function Create() {
     maxPerUser: parseInt(maxPerUser, 10) || 5,
   });
 
-  const handleGoToPayment = () => {
-    if (!title.trim()) return;
-    setScreen("checkout");
+  const handleGoToPayment = async () => {
+    setFormError("");
+    if (!auth.token || auth.user?.role !== "organizer") {
+      setFormError("Sign in with an organizer account to create events.");
+      return;
+    }
+    if (category !== "event") {
+      setFormError("Bus, flight, and tourism publishing will be connected in a later slice.");
+      return;
+    }
+    const startsAt = parseEventStart(date, time);
+    if (!title.trim() || title.trim().length < 3) {
+      setFormError("Enter an event name with at least 3 characters.");
+      return;
+    }
+    if (!selectedVenueId) {
+      setFormError("Select a venue.");
+      return;
+    }
+    if (!startsAt) {
+      setFormError("Use a valid date and time, for example 2026-09-15 and 6:00 PM.");
+      return;
+    }
+    if (description.trim().length < 10) {
+      setFormError("Add a description with at least 10 characters.");
+      return;
+    }
+    if (
+      tiers.some(
+        (tier) =>
+          !tier.name.trim() ||
+          !Number.isFinite(Number(tier.price)) ||
+          Number(tier.price) < 0 ||
+          !Number.isInteger(Number(tier.remaining)) ||
+          Number(tier.remaining) < 1,
+      )
+    ) {
+      setFormError("Every ticket tier needs a name, valid price, and inventory of at least 1.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const event = await createEventDraft(
+        {
+          title: title.trim(),
+          subtitle: subtitle.trim() || undefined,
+          venueId: selectedVenueId,
+          startsAt,
+          description: description.trim(),
+          tags,
+          maxPerUser: Number(maxPerUser) || 5,
+          ticketTiers: tiers.map((tier) => ({
+            name: tier.name.trim(),
+            priceMinor: Math.round(Number(tier.price) * 100),
+            currency: tier.currency.trim().toUpperCase() || "MWK",
+            capacity: Number(tier.remaining),
+            available: Number(tier.remaining),
+            perks: tier.perks.split(",").map((perk) => perk.trim()).filter(Boolean),
+          })),
+        },
+        auth.token,
+      );
+      setCreatedEvent(event);
+      setRecentEvents((current) => [event, ...current.filter((item) => item.id !== event.id)]);
+      setScreen("success");
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "The draft could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSubmitForReview = async () => {
+    if (!auth.token || !createdEvent) return;
+    setSubmitting(true);
+    setFormError("");
+    try {
+      const event = await submitEventDraft(createdEvent.id, auth.token);
+      setCreatedEvent(event);
+      setRecentEvents((current) =>
+        current.map((item) => (item.id === event.id ? event : item)),
+      );
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "The event could not be submitted.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handlePay = () => {
@@ -245,10 +377,10 @@ export default function Create() {
   const resetForm = () => {
     setTitle("");
     setSubtitle("");
-    setOrganizer("");
     setDate("");
     setTime("");
     setLocation("");
+    setSelectedVenueId("");
     setRoute({ from: "", to: "", duration: "", stops: "" });
     setDescription("");
     setTags([]);
@@ -258,6 +390,8 @@ export default function Create() {
     setImageName("");
     setPayMethod("tnm");
     setShowHistory(false);
+    setCreatedEvent(null);
+    setFormError("");
     setScreen("form");
   };
 
@@ -267,6 +401,50 @@ export default function Create() {
     borderColor: colors.border,
     fontFamily: fontFamilies.body,
   };
+
+  if (auth.loading) {
+    return (
+      <View style={[styles.wrap, styles.gate, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator color={colors.gold} size="large" />
+      </View>
+    );
+  }
+
+  if (!auth.user) {
+    return (
+      <View style={[styles.wrap, styles.gate, { backgroundColor: colors.bg }]}>
+        <Feather name="lock" size={42} color={colors.gold} />
+        <Text style={[styles.successTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+          Organizer sign-in required
+        </Text>
+        <Text style={[styles.successSub, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+          Create an organizer account or sign in to manage event drafts.
+        </Text>
+        <Pressable
+          onPress={() => onOpenAuth?.("organizer")}
+          style={[styles.publishBtn, { backgroundColor: colors.gold, marginTop: spacing(4) }]}
+        >
+          <Text style={[styles.publishText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>
+            Continue as Organizer
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (auth.user.role !== "organizer" || !auth.user.organizer) {
+    return (
+      <View style={[styles.wrap, styles.gate, { backgroundColor: colors.bg }]}>
+        <Feather name="users" size={42} color={colors.gold} />
+        <Text style={[styles.successTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+          Organizer account required
+        </Text>
+        <Text style={[styles.successSub, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+          This account can discover and buy tickets, but only organizer accounts can publish events.
+        </Text>
+      </View>
+    );
+  }
 
   /* ---------------------------------------------------------------- */
   // RENDER: HISTORY
@@ -301,7 +479,12 @@ export default function Create() {
             paddingBottom: isDesktop ? spacing(12) : spacing(24),
           }}
         >
-          {RECENT_TICKETS.map((ticket, i) => (
+          {recentEvents.length === 0 && (
+            <Text style={[styles.successSub, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+              No event drafts yet.
+            </Text>
+          )}
+          {recentEvents.map((ticket, i) => (
             <View
               key={ticket.id}
               style={[
@@ -310,7 +493,7 @@ export default function Create() {
                   backgroundColor: colors.surface,
                   borderBottomColor: colors.border,
                 },
-                i < RECENT_TICKETS.length - 1 && { borderBottomWidth: 1 },
+                i < recentEvents.length - 1 && { borderBottomWidth: 1 },
               ]}
             >
               <View
@@ -320,7 +503,7 @@ export default function Create() {
                 ]}
               >
                 <Feather
-                  name={ticket.category === "Event" ? "calendar" : ticket.category === "Bus Route" ? "truck" : "map"}
+                  name="calendar"
                   size={20}
                   color={colors.ink}
                 />
@@ -340,7 +523,7 @@ export default function Create() {
                     { color: colors.inkMuted, fontFamily: fontFamilies.body },
                   ]}
                 >
-                  {ticket.category} · {ticket.date}
+                  Event · {new Date(ticket.startsAt).toLocaleDateString()}
                 </Text>
               </View>
               <View
@@ -366,7 +549,7 @@ export default function Create() {
                     },
                   ]}
                 >
-                  {ticket.status}
+                  {ticket.status.replace("_", " ")}
                 </Text>
               </View>
             </View>
@@ -656,7 +839,7 @@ export default function Create() {
             { color: colors.ink, fontFamily: fontFamilies.display },
           ]}
         >
-          Payment Successful
+          {createdEvent?.status === "pending_review" ? "Submitted for Review" : "Draft Saved"}
         </Text>
         <Text
           style={[
@@ -664,16 +847,52 @@ export default function Create() {
             { color: colors.inkMuted, fontFamily: fontFamilies.body },
           ]}
         >
-          Your {CATEGORIES[activeIndex].label.toLowerCase()} has been published.
+          {createdEvent?.status === "pending_review"
+            ? "Your event is waiting for moderation before it can be published."
+            : "Your event is private. Submit it when it is ready for moderation."}
         </Text>
+        {createdEvent?.status === "draft" && (
+          <Pressable
+            disabled={submitting}
+            onPress={handleSubmitForReview}
+            style={[
+              styles.publishBtn,
+              { backgroundColor: colors.gold, marginTop: spacing(6), opacity: submitting ? 0.65 : 1 },
+            ]}
+          >
+            {submitting ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={[styles.publishText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>
+                Submit for Review
+              </Text>
+            )}
+          </Pressable>
+        )}
+        {!!formError && (
+          <Text style={[styles.successSub, { color: "#DC2626", marginTop: spacing(3) }]}>
+            {formError}
+          </Text>
+        )}
         <Pressable
           onPress={resetForm}
-          style={[styles.publishBtn, { backgroundColor: colors.gold, marginTop: spacing(6) }]}
+          style={[
+            styles.publishBtn,
+            {
+              backgroundColor: createdEvent?.status === "draft" ? colors.surface : colors.gold,
+              borderColor: colors.border,
+              borderWidth: createdEvent?.status === "draft" ? 1 : 0,
+              marginTop: spacing(3),
+            },
+          ]}
         >
           <Text
             style={[
               styles.publishText,
-              { color: colors.white, fontFamily: fontFamilies.bodySemi },
+              {
+                color: createdEvent?.status === "draft" ? colors.ink : colors.white,
+                fontFamily: fontFamilies.bodySemi,
+              },
             ]}
           >
             Create Another
@@ -850,7 +1069,7 @@ export default function Create() {
               placeholder={placeholders.organizer}
               placeholderTextColor={colors.inkMuted}
               value={organizer}
-              onChangeText={setOrganizer}
+              editable={false}
               style={[styles.input, inputBase]}
             />
           </FormField>
@@ -879,12 +1098,52 @@ export default function Create() {
 
           <FormField label={labels.location} colors={colors}>
             <TextInput
-              placeholder={placeholders.location}
+              placeholder={venues.length ? "Select a venue below" : "Loading venues..."}
               placeholderTextColor={colors.inkMuted}
               value={location}
-              onChangeText={setLocation}
+              editable={false}
               style={[styles.input, inputBase]}
             />
+            <View style={styles.venueGrid}>
+              {venues.map((venue) => {
+                const selected = venue.id === selectedVenueId;
+                return (
+                  <Pressable
+                    key={venue.id}
+                    onPress={() => {
+                      setSelectedVenueId(venue.id);
+                      setLocation(`${venue.name}, ${venue.city}`);
+                      setFormError("");
+                    }}
+                    style={[
+                      styles.venueChip,
+                      {
+                        backgroundColor: selected ? colors.gold : colors.surface,
+                        borderColor: selected ? colors.gold : colors.border,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={{
+                        color: selected ? colors.black : colors.ink,
+                        fontFamily: fontFamilies.bodySemi,
+                      }}
+                    >
+                      {venue.name}
+                    </Text>
+                    <Text
+                      style={{
+                        color: selected ? colors.black : colors.inkMuted,
+                        fontFamily: fontFamilies.body,
+                        fontSize: 12,
+                      }}
+                    >
+                      {venue.city}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
           </FormField>
         </View>
 
@@ -1183,19 +1442,29 @@ export default function Create() {
         </View>
 
         {/* Publish */}
+        {!!formError && (
+          <Text style={[styles.formError, { color: "#DC2626", fontFamily: fontFamilies.body }]}>
+            {formError}
+          </Text>
+        )}
         <View style={styles.actions}>
           <Pressable
+            disabled={saving}
             onPress={handleGoToPayment}
-            style={[styles.publishBtn, { backgroundColor: colors.gold }]}
+            style={[styles.publishBtn, { backgroundColor: colors.gold, opacity: saving ? 0.65 : 1 }]}
           >
-            <Text
-              style={[
-                styles.publishText,
-                { color: colors.white, fontFamily: fontFamilies.bodySemi },
-              ]}
-            >
-              Continue to Payment
-            </Text>
+            {saving ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text
+                style={[
+                  styles.publishText,
+                  { color: colors.white, fontFamily: fontFamilies.bodySemi },
+                ]}
+              >
+                Save Event Draft
+              </Text>
+            )}
           </Pressable>
         </View>
       </ScrollView>
@@ -1237,6 +1506,13 @@ function FormField({
 /* ------------------------------------------------------------------ */
 const styles = StyleSheet.create({
   wrap: { width: "100%", flex: 1 },
+  gate: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing(2),
+    minHeight: 480,
+    padding: spacing(6),
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -1286,6 +1562,23 @@ const styles = StyleSheet.create({
   },
   typeLabel: { fontSize: 15 },
   typeDesc: { fontSize: 13 },
+  venueGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing(2),
+    marginTop: spacing(2),
+  },
+  venueChip: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2),
+    minWidth: 150,
+  },
+  formError: {
+    fontSize: 14,
+    marginTop: spacing(4),
+  },
 
   uploadBox: {
     borderWidth: 2,

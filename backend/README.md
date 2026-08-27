@@ -25,10 +25,33 @@ PostgreSQL installation on the default port. Use `npm run db:migrate -- --name
 The API runs at http://localhost:3000. Health information is available at
 GET `/api/health`. Public read endpoints are:
 
-- GET `/api/v1/events` with optional `q`, `city`, `status`, `cursor`, and `limit`
+- GET `/api/v1/events` with optional `q`, `city`, `cursor`, and `limit`
 - GET `/api/v1/events/:eventId`
 - GET `/api/v1/venues` with optional `q`, `city`, `cursor`, and `limit`
 - GET `/api/v1/venues/:venueId`
+
+Authentication endpoints are:
+
+- POST `/api/v1/auth/register`
+- POST `/api/v1/auth/login`
+- GET `/api/v1/auth/me`
+- POST `/api/v1/auth/logout`
+
+Register with `accountType: "customer"` or `accountType: "organizer"`. Login
+and registration return an opaque bearer token. Send it as `Authorization:
+Bearer <token>` to protected endpoints. The database stores only a SHA-256 hash
+of each token, sessions expire after 30 days, and passwords are hashed with
+scrypt.
+
+Organizer-only event workflow endpoints are:
+
+- POST `/api/v1/events` to save a draft owned by the authenticated organizer
+- GET `/api/v1/organizer/events` to list that organizer's events
+- POST `/api/v1/events/:eventId/submit` to move an owned draft to
+  `pending_review`
+
+Public event reads return published events only. Draft and moderation states are
+available only through the organizer-owned endpoint.
 
 List responses expose the next cursor in `meta.nextCursor`. Event detail reads
 only return published events.

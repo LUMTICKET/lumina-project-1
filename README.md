@@ -18,7 +18,7 @@ The app is structured around a landing page that switches between six main secti
 
 - **Home** — grid-driven discovery of events, routes, and ticketed services.
 - **Search** — search and browse travel, ticketing, courier, and event listings.
-- **Create** — content creation / action screen for posting or publishing new items.
+- **Create** — authenticated organizer workflow for event drafts and moderation submission.
 - **Messaging** — chat-style interface for conversations and inquiries.
 - **Feeds** — social-style feed with media posts, videos, likes, and ticket CTAs.
 - **Settings** — user and business settings, access controls, billing options, and plan upgrades.
@@ -155,8 +155,11 @@ The app loads a single landing page and renders one of the route components base
 
 Each route component uses the theme provider for colors and styles, and several screens implement responsive column layouts depending on screen width.
 
-The Expo app now consumes the Next.js API for event discovery and venue search. Other travel,
-delivery, feed, and creation screens remain staged for backend integration.
+The Expo app consumes the Next.js API for event discovery, venue search,
+authentication, and organizer-owned event drafts. Organizer sessions use secure
+device storage on native platforms and guarded browser storage on web. Bus,
+flight, tourism, delivery, and feed creation remain staged for backend
+integration.
 
 
 2. Create a feature branch.

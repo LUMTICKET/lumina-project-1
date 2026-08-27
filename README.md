@@ -87,6 +87,21 @@ Start Expo:
 npm run start
 ```
 
+The Events Tickets screen reads from the local API. Copy `.env.example` to
+`.env`, then start PostgreSQL and the backend in separate terminals:
+
+```bash
+docker compose -f backend/compose.yaml up -d
+cd backend
+npx prisma migrate deploy
+npm run db:seed
+npm run dev
+```
+
+`EXPO_PUBLIC_API_URL` defaults to `http://localhost:3000/api/v1` for web and
+simulators. For a physical phone, set it to your computer's LAN address, such
+as `http://192.168.1.20:3000/api/v1`, before starting Expo.
+
 Open in one of the target environments:
 
 ```bash
@@ -140,7 +155,8 @@ The app loads a single landing page and renders one of the route components base
 
 Each route component uses the theme provider for colors and styles, and several screens implement responsive column layouts depending on screen width.
 
-The app is currently a front-end shell with UI and navigation. It is built to support travel, ticketing, delivery, and event discovery workflows.
+The Expo app now consumes the Next.js API for event discovery. Other travel,
+delivery, feed, and creation screens remain staged for backend integration.
 
 
 2. Create a feature branch.

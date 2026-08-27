@@ -1,56 +1,73 @@
 import { Feather } from "@expo/vector-icons";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  type ViewStyle,
   useWindowDimensions,
   View,
 } from "react-native";
+import { ApiEvent, fetchEvents } from "../api/events";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 import { TicketConfig } from "./TicketConfigPage";
 
-const ITEMS: TicketConfig[] = [
-  {
-    id: "evt-1",
-    title: "Goshen City Dedza Dynamos vs FCB Nyasa Big Bullets",
-    subtitle: "FDH Bank Premiership matchday",
+const EVENT_IMAGES: Record<string, TicketConfig["image"]> = {
+  "evt-1": require("@/assets/images/event3.jpg"),
+  "evt-2": require("@/assets/images/event2.jpg"),
+};
+const DEFAULT_EVENT_IMAGE = require("@/assets/images/event2.jpg");
+
+function minorToMajor(amount: number, currency: string) {
+  try {
+    const fractionDigits = new Intl.NumberFormat("en", {
+      style: "currency",
+      currency,
+    }).resolvedOptions().maximumFractionDigits ?? 2;
+
+    return amount / 10 ** fractionDigits;
+  } catch {
+    return amount / 100;
+  }
+}
+
+function toTicketConfig(event: ApiEvent): TicketConfig {
+  const startsAt = new Date(event.startsAt);
+
+  return {
+    id: event.id,
+    title: event.title,
+    subtitle: event.subtitle ?? undefined,
     category: "event",
-    image: require("@/assets/images/event3.jpg"),
-    organizer: "Super League of Malawi (SULOM)",
-    date: "2026-05-31T14:30:00",
-    time: "2:30 PM",
-    location: "Bingu National Stadium, Lilongwe",
-    tiers: [
-      { id: "regular", name: "Open Stand", price: 4000, currency: "MWK", perks: ["General Access"], remaining: 120 },
-      { id: "vip", name: "VIP Stand", price: 150000, currency: "MWK", perks: ["Covered Seating", "Premium View"], remaining: 15 },
-    ],
-    description:  "The People's Team travel to face Goshen City Dedza Dynamos in an FDH Bank Premiership clash. Expect a tightly contested matchday as Dedza Dynamos look to upset the league heavyweights on home turf.",
-    tags: ["Football", "FDH Premiership", "Malawi"],
-    maxPerUser: 8,
-  },
-  {
-    id: "evt-2",
-    title: "Lilongwe Food Fest",
-    subtitle: "A taste of Malawi and beyond",
-    category: "event",
-    image: require("@/assets/images/event2.jpg"),
-    organizer: "Saba's Kitchen",
-    date: "2026-08-30T10:00:00",
-    time: "10:00 AM",
-    location: "Portuguese Club, Lilongwe",
-    tiers: [
-      { id: "day1", name: "Entry Pass", price: 5000, currency: "MWK", perks: ["Food Stall Access", "Tastings"], remaining: 500 },
-      { id: "stall", name: "Stall Booking", price: 20000, currency: "MWK", perks: ["Vendor Table", "Priority Setup"], remaining: 30 },
-    ],
-    description: "A celebration of local and international cuisine at the Portuguese Club. Food vendors, tastings, and a lively atmosphere for everyone to enjoy — book your stall or grab an entry pass to explore the flavors on offer.",
-    tags: ["Food", "Festival", "Lilongwe"],
-    maxPerUser: 4,
-  },
-];
+    image: event.imageUrl
+      ? { uri: event.imageUrl }
+      : EVENT_IMAGES[event.id] ?? DEFAULT_EVENT_IMAGE,
+    organizer: event.organizer.name,
+    organizerAvatar: event.organizer.avatarUrl ?? undefined,
+    date: event.startsAt,
+    time: startsAt.toLocaleTimeString([], {
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+    location: `${event.venue.name}, ${event.venue.city}`,
+    tiers: event.ticketTiers.map((tier) => ({
+      id: tier.id,
+      name: tier.name,
+      price: minorToMajor(tier.priceMinor, tier.currency),
+      currency: tier.currency,
+      perks: tier.perks,
+      remaining: tier.available,
+    })),
+    description: event.description,
+    tags: event.tags,
+    maxPerUser: event.maxPerUser,
+  };
+}
 
 interface EventsTicketsProps {
   onSelectTicket?: (ticket: TicketConfig) => void;
@@ -61,26 +78,48 @@ export default function EventsTickets({ onSelectTicket, onBack }: EventsTicketsP
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
+  const [items, setItems] = useState<TicketConfig[]>([]);
+  const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
+  const [errorMessage, setErrorMessage] = useState("");
+  const [retryKey, setRetryKey] = useState(0);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void fetchEvents(controller.signal)
+      .then((events) => {
+        setItems(events.map(toTicketConfig));
+        setErrorMessage("");
+        setLoadState("ready");
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setErrorMessage(
+          error instanceof Error ? error.message : "Events could not be loaded.",
+        );
+        setLoadState("error");
+      });
+
+    return () => controller.abort();
+  }, [retryKey]);
 
   let columnCount = 2;
   if (width >= 1400) columnCount = 6;
   else if (width >= 1100) columnCount = 5;
   else if (width >= 768) columnCount = 3;
 
-  const columns: (typeof ITEMS)[] = Array.from({ length: columnCount }, () => []);
-  ITEMS.forEach((item, i) => columns[i % columnCount].push(item));
-
-  const showHeader = !!onBack;
+  const columns: TicketConfig[][] = Array.from({ length: columnCount }, () => []);
+  items.forEach((item, index) => columns[index % columnCount].push(item));
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-      {showHeader && (
+      {!!onBack && (
         <View
           style={[
             styles.header,
             { backgroundColor: colors.bg, borderBottomColor: colors.border },
             Platform.OS === "web"
-              ? ({ position: "sticky", top: 0, zIndex: 50 } as any)
+              ? ({ position: "sticky", top: 0, zIndex: 50 } as unknown as ViewStyle)
               : {},
           ]}
         >
@@ -108,33 +147,98 @@ export default function EventsTickets({ onSelectTicket, onBack }: EventsTicketsP
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.board}>
-          {columns.map((col, ci) => (
-            <View key={ci} style={styles.column}>
-              {col.map((pin) => (
-                <Pressable key={pin.id} style={styles.pinWrap} onPress={() => onSelectTicket?.(pin)}>
-                  <View style={[styles.pinCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-                    <View style={styles.imageWrap}>
-                      <Image source={pin.image} style={[styles.pinImage, { height: 300 }]} resizeMode="cover" />
-                      <View style={styles.saveOverlay}>
-                        <Pressable 
-                          style={[styles.saveBtn, { backgroundColor: colors.gold }]}
-                          onPress={() => onSelectTicket?.(pin)}
+        {loadState === "loading" && (
+          <View style={styles.statePanel}>
+            <ActivityIndicator color={colors.gold} size="large" />
+            <Text style={[styles.stateText, { color: colors.inkMuted }]}>Loading events…</Text>
+          </View>
+        )}
+        {loadState === "error" && (
+          <View style={styles.statePanel}>
+            <Feather name="alert-circle" size={28} color={colors.inkMuted} />
+            <Text style={[styles.stateText, { color: colors.inkMuted }]}>{errorMessage}</Text>
+            <Pressable
+              style={[styles.retryBtn, { backgroundColor: colors.gold }]}
+              onPress={() => {
+                setLoadState("loading");
+                setRetryKey((value) => value + 1);
+              }}
+            >
+              <Text style={[styles.retryText, { color: colors.black }]}>Try again</Text>
+            </Pressable>
+          </View>
+        )}
+        {loadState === "ready" && items.length === 0 && (
+          <View style={styles.statePanel}>
+            <Feather name="calendar" size={28} color={colors.inkMuted} />
+            <Text style={[styles.stateText, { color: colors.inkMuted }]}>No events are available yet.</Text>
+          </View>
+        )}
+        {loadState === "ready" && items.length > 0 && (
+          <View style={styles.board}>
+            {columns.map((column, columnIndex) => (
+              <View key={columnIndex} style={styles.column}>
+                {column.map((event) => (
+                  <Pressable
+                    key={event.id}
+                    style={styles.pinWrap}
+                    onPress={() => onSelectTicket?.(event)}
+                  >
+                    <View
+                      style={[
+                        styles.pinCard,
+                        { backgroundColor: colors.surface, shadowColor: colors.shadow },
+                      ]}
+                    >
+                      <View style={styles.imageWrap}>
+                        <Image
+                          source={event.image}
+                          style={styles.pinImage}
+                          resizeMode="cover"
+                        />
+                        <View style={styles.saveOverlay}>
+                          <Pressable
+                            style={[styles.saveBtn, { backgroundColor: colors.gold }]}
+                            onPress={() => onSelectTicket?.(event)}
+                          >
+                            <Text
+                              style={[
+                                styles.saveText,
+                                { color: colors.white, fontFamily: fontFamilies.bodySemi },
+                              ]}
+                            >
+                              Get Ticket
+                            </Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                      <View style={styles.pinBody}>
+                        <Text
+                          style={[
+                            styles.pinTitle,
+                            { color: colors.ink, fontFamily: fontFamilies.display },
+                          ]}
+                          numberOfLines={2}
                         >
-                          <Text style={[styles.saveText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>Get Ticket</Text>
-                        </Pressable>
+                          {event.title}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.pinSubtitle,
+                            { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {event.subtitle}
+                        </Text>
                       </View>
                     </View>
-                    <View style={styles.pinBody}>
-                      <Text style={[styles.pinTitle, { color: colors.ink, fontFamily: fontFamilies.display }]} numberOfLines={2}>{pin.title}</Text>
-                      <Text style={[styles.pinSubtitle, { color: colors.inkMuted, fontFamily: fontFamilies.body }]} numberOfLines={1}>{pin.subtitle}</Text>
-                    </View>
-                  </View>
-                </Pressable>
-              ))}
-            </View>
-          ))}
-        </View>
+                  </Pressable>
+                ))}
+              </View>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -165,17 +269,66 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing(2),
     fontFamily: fontFamilies.display,
   },
-
-  board: { flexDirection: "row", gap: spacing(3), alignItems: "flex-start", maxWidth: 1600, alignSelf: "center", width: "100%" },
+  board: {
+    flexDirection: "row",
+    gap: spacing(3),
+    alignItems: "flex-start",
+    maxWidth: 1600,
+    alignSelf: "center",
+    width: "100%",
+  },
   column: { flex: 1, gap: spacing(3) },
   pinWrap: { width: "100%", marginBottom: spacing(3) },
-  pinCard: { borderRadius: radii.xl, overflow: "hidden", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
+  pinCard: {
+    borderRadius: radii.xl,
+    overflow: "hidden",
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
+  },
   imageWrap: { position: "relative", width: "100%" },
-  pinImage: { width: "100%" },
-  saveOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-start", alignItems: "flex-end", padding: spacing(3) },
-  saveBtn: { paddingHorizontal: spacing(4), paddingVertical: spacing(2), borderRadius: radii.full, shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
+  pinImage: { width: "100%", height: 300 },
+  saveOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    padding: spacing(3),
+  },
+  saveBtn: {
+    paddingHorizontal: spacing(4),
+    paddingVertical: spacing(2),
+    borderRadius: radii.full,
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
   saveText: { fontSize: 13 },
-  pinBody: { paddingHorizontal: spacing(3), paddingTop: spacing(3), paddingBottom: spacing(3.5), gap: 4 },
+  pinBody: {
+    paddingHorizontal: spacing(3),
+    paddingTop: spacing(3),
+    paddingBottom: spacing(3.5),
+    gap: 4,
+  },
   pinTitle: { fontSize: 14, lineHeight: 18 },
   pinSubtitle: { fontSize: 12 },
+  statePanel: {
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing(3),
+    minHeight: 280,
+    padding: spacing(6),
+  },
+  stateText: { fontSize: 14, textAlign: "center" },
+  retryBtn: {
+    borderRadius: radii.full,
+    paddingHorizontal: spacing(5),
+    paddingVertical: spacing(2.5),
+  },
+  retryText: { fontSize: 13, fontFamily: fontFamilies.bodySemi },
 });

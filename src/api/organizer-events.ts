@@ -25,6 +25,18 @@ export function createEventDraft(input: CreateEventDraftInput, token: string) {
   return apiRequest<ApiEvent>("/events", { method: "POST", body: input, token });
 }
 
+export function updateEventDraft(
+  eventId: string,
+  input: CreateEventDraftInput,
+  token: string,
+) {
+  return apiRequest<ApiEvent>(`/events/${encodeURIComponent(eventId)}`, {
+    method: "PATCH",
+    body: input,
+    token,
+  });
+}
+
 export function fetchOrganizerEvents(token: string, signal?: AbortSignal) {
   return apiRequest<ApiEvent[]>("/organizer/events", { token, signal });
 }

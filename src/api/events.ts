@@ -33,6 +33,8 @@ export interface ApiEvent {
   description: string;
   tags: string[];
   status: string;
+  moderationNote?: string | null;
+  reviewedAt?: string | null;
   maxPerUser: number;
   ticketTiers: ApiTicketTier[];
 }

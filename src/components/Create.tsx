@@ -17,9 +17,15 @@ import { fontFamilies, radii, spacing } from "../theme/tokens";
 import type { AccountType } from "../api/auth";
 import type { ApiEvent } from "../api/events";
 import {
+  fetchEventModerationQueue,
+  moderateEvent,
+} from "../api/moderation";
+import {
   createEventDraft,
   fetchOrganizerEvents,
   submitEventDraft,
+  updateEventDraft,
+  type CreateEventDraftInput,
 } from "../api/organizer-events";
 import { fetchVenues, type ApiVenue } from "../api/venues";
 import { useAuth } from "../auth/AuthContext";
@@ -94,6 +100,22 @@ function parseEventStart(date: string, time: string) {
   return Number.isNaN(parsed.valueOf()) ? null : parsed.toISOString();
 }
 
+function eventDateForForm(startsAt: string) {
+  const date = new Date(startsAt);
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function eventTimeForForm(startsAt: string) {
+  const date = new Date(startsAt);
+  const hour = date.getHours();
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${hour % 12 || 12}:${minute} ${hour >= 12 ? "PM" : "AM"}`;
+}
+
 /* ------------------------------------------------------------------ */
 // Main Component
 /* ------------------------------------------------------------------ */
@@ -116,6 +138,8 @@ export default function Create({
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [createdEvent, setCreatedEvent] = useState<ApiEvent | null>(null);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [editingModerationNote, setEditingModerationNote] = useState<string | null>(null);
   const [recentEvents, setRecentEvents] = useState<ApiEvent[]>([]);
   const [venues, setVenues] = useState<ApiVenue[]>([]);
   const [selectedVenueId, setSelectedVenueId] = useState("");
@@ -318,27 +342,29 @@ export default function Create({
 
     setSaving(true);
     try {
-      const event = await createEventDraft(
-        {
-          title: title.trim(),
-          subtitle: subtitle.trim() || undefined,
-          venueId: selectedVenueId,
-          startsAt,
-          description: description.trim(),
-          tags,
-          maxPerUser: Number(maxPerUser) || 5,
-          ticketTiers: tiers.map((tier) => ({
-            name: tier.name.trim(),
-            priceMinor: Math.round(Number(tier.price) * 100),
-            currency: tier.currency.trim().toUpperCase() || "MWK",
-            capacity: Number(tier.remaining),
-            available: Number(tier.remaining),
-            perks: tier.perks.split(",").map((perk) => perk.trim()).filter(Boolean),
-          })),
-        },
-        auth.token,
-      );
+      const payload: CreateEventDraftInput = {
+        title: title.trim(),
+        subtitle: subtitle.trim() || undefined,
+        venueId: selectedVenueId,
+        startsAt,
+        description: description.trim(),
+        tags,
+        maxPerUser: Number(maxPerUser) || 5,
+        ticketTiers: tiers.map((tier) => ({
+          name: tier.name.trim(),
+          priceMinor: Math.round(Number(tier.price) * 100),
+          currency: tier.currency.trim().toUpperCase() || "MWK",
+          capacity: Number(tier.remaining),
+          available: Number(tier.remaining),
+          perks: tier.perks.split(",").map((perk) => perk.trim()).filter(Boolean),
+        })),
+      };
+      const event = editingEventId
+        ? await updateEventDraft(editingEventId, payload, auth.token)
+        : await createEventDraft(payload, auth.token);
       setCreatedEvent(event);
+      setEditingEventId(event.id);
+      setEditingModerationNote(event.moderationNote ?? null);
       setRecentEvents((current) => [event, ...current.filter((item) => item.id !== event.id)]);
       setScreen("success");
     } catch (error) {
@@ -346,6 +372,36 @@ export default function Create({
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditEvent = (event: ApiEvent) => {
+    setActiveIndex(0);
+    setTitle(event.title);
+    setSubtitle(event.subtitle ?? "");
+    setDate(eventDateForForm(event.startsAt));
+    setTime(eventTimeForForm(event.startsAt));
+    setLocation(`${event.venue.name}, ${event.venue.city}`);
+    setSelectedVenueId(event.venue.id);
+    setDescription(event.description);
+    setTags(event.tags);
+    setTagInput("");
+    setMaxPerUser(String(event.maxPerUser));
+    setTiers(
+      event.ticketTiers.map((tier) => ({
+        id: tier.id,
+        name: tier.name,
+        price: String(tier.priceMinor / 100),
+        currency: tier.currency,
+        perks: tier.perks.join(", "),
+        remaining: String(tier.capacity),
+      })),
+    );
+    setEditingEventId(event.id);
+    setEditingModerationNote(event.moderationNote ?? null);
+    setCreatedEvent(null);
+    setFormError("");
+    setShowHistory(false);
+    setScreen("form");
   };
 
   const handleSubmitForReview = async () => {
@@ -391,6 +447,8 @@ export default function Create({
     setPayMethod("tnm");
     setShowHistory(false);
     setCreatedEvent(null);
+    setEditingEventId(null);
+    setEditingModerationNote(null);
     setFormError("");
     setScreen("form");
   };
@@ -432,6 +490,10 @@ export default function Create({
     );
   }
 
+  if (auth.user.role === "admin" && auth.token) {
+    return <ModerationPanel token={auth.token} />;
+  }
+
   if (auth.user.role !== "organizer" || !auth.user.organizer) {
     return (
       <View style={[styles.wrap, styles.gate, { backgroundColor: colors.bg }]}>
@@ -465,7 +527,7 @@ export default function Create({
               { color: colors.ink, fontFamily: fontFamilies.display },
             ]}
           >
-            Recent Tickets
+            Your Events
           </Text>
           <Pressable onPress={() => setShowHistory(false)} style={styles.backBtn}>
             <Feather name="x" size={22} color={colors.ink} />
@@ -552,6 +614,15 @@ export default function Create({
                   {ticket.status.replace("_", " ")}
                 </Text>
               </View>
+              {(ticket.status === "draft" || ticket.status === "rejected") && (
+                <Pressable
+                  accessibilityLabel={`Edit ${ticket.title}`}
+                  onPress={() => handleEditEvent(ticket)}
+                  style={[styles.historyEditBtn, { borderColor: colors.border }]}
+                >
+                  <Feather name="edit-2" size={16} color={colors.ink} />
+                </Pressable>
+              )}
             </View>
           ))}
         </ScrollView>
@@ -941,6 +1012,21 @@ export default function Create({
         }}
         showsVerticalScrollIndicator={false}
       >
+        {!!editingModerationNote && (
+          <View
+            style={[
+              styles.moderationNotice,
+              { backgroundColor: "rgba(220, 38, 38, 0.08)", borderColor: "#DC2626" },
+            ]}
+          >
+            <Text style={{ color: "#DC2626", fontFamily: fontFamilies.bodySemi }}>
+              Changes requested
+            </Text>
+            <Text style={{ color: colors.ink, fontFamily: fontFamilies.body }}>
+              {editingModerationNote}
+            </Text>
+          </View>
+        )}
         {/* Category selector */}
         <Text
           style={[
@@ -1462,7 +1548,7 @@ export default function Create({
                   { color: colors.white, fontFamily: fontFamilies.bodySemi },
                 ]}
               >
-                Save Event Draft
+                {editingEventId ? "Update Event Draft" : "Save Event Draft"}
               </Text>
             )}
           </Pressable>
@@ -1475,6 +1561,158 @@ export default function Create({
 /* ------------------------------------------------------------------ */
 // Sub-components
 /* ------------------------------------------------------------------ */
+function ModerationPanel({ token }: { token: string }) {
+  const { colors } = useLumTheme();
+  const [events, setEvents] = useState<ApiEvent[]>([]);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [reviewingId, setReviewingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchEventModerationQueue(token, controller.signal)
+      .then(setEvents)
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          setErrorMessage(
+            error instanceof Error ? error.message : "The moderation queue could not be loaded.",
+          );
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [token]);
+
+  const review = async (event: ApiEvent, decision: "approve" | "reject") => {
+    const note = notes[event.id]?.trim() ?? "";
+    if (decision === "reject" && note.length < 10) {
+      setErrorMessage("A rejection note must contain at least 10 characters.");
+      return;
+    }
+
+    setReviewingId(event.id);
+    setErrorMessage("");
+    try {
+      await moderateEvent(
+        event.id,
+        decision === "approve"
+          ? { decision, ...(note ? { note } : {}) }
+          : { decision, note },
+        token,
+      );
+      setEvents((current) => current.filter((item) => item.id !== event.id));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "The review could not be saved.");
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
+  return (
+    <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.bg, borderBottomColor: colors.border },
+        ]}
+      >
+        <View style={{ width: 40 }} />
+        <Text style={[styles.headerTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+          Event Moderation
+        </Text>
+        <View style={{ width: 40 }} />
+      </View>
+      <ScrollView
+        contentContainerStyle={styles.moderationQueue}
+        showsVerticalScrollIndicator={false}
+      >
+        {loading && <ActivityIndicator color={colors.gold} size="large" />}
+        {!loading && events.length === 0 && (
+          <View style={styles.gate}>
+            <Feather name="check-circle" size={42} color={colors.gold} />
+            <Text style={[styles.successTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+              Queue is clear
+            </Text>
+            <Text style={[styles.successSub, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+              There are no events waiting for review.
+            </Text>
+          </View>
+        )}
+        {events.map((event) => (
+          <View
+            key={event.id}
+            style={[
+              styles.moderationCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.successTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+              {event.title}
+            </Text>
+            <Text style={[styles.historyMeta, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+              {event.organizer.name} · {event.venue.name} ·{" "}
+              {new Date(event.startsAt).toLocaleString()}
+            </Text>
+            <Text style={{ color: colors.ink, fontFamily: fontFamilies.body }}>
+              {event.description}
+            </Text>
+            <TextInput
+              multiline
+              placeholder="Review note (required when requesting changes)"
+              placeholderTextColor={colors.inkMuted}
+              value={notes[event.id] ?? ""}
+              onChangeText={(note) =>
+                setNotes((current) => ({ ...current, [event.id]: note }))
+              }
+              style={[
+                styles.moderationInput,
+                {
+                  color: colors.ink,
+                  backgroundColor: colors.bg,
+                  borderColor: colors.border,
+                  fontFamily: fontFamilies.body,
+                },
+              ]}
+            />
+            <View style={styles.moderationActions}>
+              <Pressable
+                disabled={reviewingId === event.id}
+                onPress={() => void review(event, "reject")}
+                style={[styles.reviewBtn, { borderColor: "#DC2626" }]}
+              >
+                <Text style={{ color: "#DC2626", fontFamily: fontFamilies.bodySemi }}>
+                  Request Changes
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={reviewingId === event.id}
+                onPress={() => void review(event, "approve")}
+                style={[styles.reviewBtn, { backgroundColor: colors.gold, borderColor: colors.gold }]}
+              >
+                {reviewingId === event.id ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={{ color: colors.white, fontFamily: fontFamilies.bodySemi }}>
+                    Approve & Publish
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        ))}
+        {!!errorMessage && (
+          <Text style={[styles.formError, { color: "#DC2626", fontFamily: fontFamilies.body }]}>
+            {errorMessage}
+          </Text>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
 function FormField({
   label,
   colors,
@@ -1568,6 +1806,14 @@ const styles = StyleSheet.create({
     gap: spacing(2),
     marginTop: spacing(2),
   },
+  historyEditBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   venueChip: {
     borderWidth: 1,
     borderRadius: radii.lg,
@@ -1578,6 +1824,45 @@ const styles = StyleSheet.create({
   formError: {
     fontSize: 14,
     marginTop: spacing(4),
+  },
+  moderationNotice: {
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing(3),
+    gap: spacing(1),
+    marginBottom: spacing(3),
+  },
+  moderationQueue: {
+    padding: spacing(4),
+    gap: spacing(4),
+    paddingBottom: spacing(16),
+  },
+  moderationCard: {
+    borderWidth: 1,
+    borderRadius: radii.xl,
+    padding: spacing(5),
+    gap: spacing(3),
+  },
+  moderationInput: {
+    minHeight: 96,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing(3),
+    textAlignVertical: "top",
+  },
+  moderationActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    gap: spacing(2),
+  },
+  reviewBtn: {
+    borderWidth: 1,
+    borderRadius: radii.full,
+    paddingHorizontal: spacing(4),
+    paddingVertical: spacing(3),
+    minWidth: 150,
+    alignItems: "center",
   },
 
   uploadBox: {

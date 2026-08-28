@@ -17,10 +17,10 @@ All screens and navigation are provided from a single shared codebase.
 The app is structured around a landing page that switches between six main sections:
 
 - **Home** — grid-driven discovery of events, routes, and ticketed services.
-- **Search** — search and browse travel, ticketing, courier, and event listings.
+- **Search** — search live event, venue, and feed-post results.
 - **Create** — authenticated organizer workflow for event drafts and moderation submission.
 - **Messaging** — chat-style interface for conversations and inquiries.
-- **Feeds** — social-style feed with media posts, videos, likes, and ticket CTAs.
+- **Feeds** — API-backed media posts, creation, likes, reporting, and ticket CTAs.
 - **Settings** — user and business settings, access controls, billing options, and plan upgrades.
 
 Additional UI features include:
@@ -156,11 +156,13 @@ The app loads a single landing page and renders one of the route components base
 Each route component uses the theme provider for colors and styles, and several screens implement responsive column layouts depending on screen width.
 
 The Expo app consumes the Next.js API for event discovery, venue search,
-authentication, organizer-owned event drafts, draft editing, and event
-moderation. Organizers can address rejection notes and resubmit; administrators
-review submissions from the Create route. Organizer sessions use secure device
-storage on native platforms and guarded browser storage on web. Bus, flight,
-tourism, delivery, and feed creation remain staged for backend integration.
+authentication, organizer-owned event drafts, draft editing, event moderation,
+feed posts, media metadata, reactions, reporting, and post search. Organizers
+can address rejection notes and resubmit; administrators review event
+submissions and reported posts from the Create route. Organizer sessions use
+secure device storage on native platforms and guarded browser storage on web.
+Bus, flight, tourism, courier, and parcel tracking remain staged for backend
+integration.
 
 
 2. Create a feature branch.

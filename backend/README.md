@@ -29,6 +29,8 @@ GET `/api/health`. Public read endpoints are:
 - GET `/api/v1/events/:eventId`
 - GET `/api/v1/venues` with optional `q`, `city`, `cursor`, and `limit`
 - GET `/api/v1/venues/:venueId`
+- GET `/api/v1/posts` with optional `q`, `cursor`, and `limit`
+- GET `/api/v1/posts/:postId`
 
 Authentication endpoints are:
 
@@ -60,6 +62,9 @@ Administrator moderation endpoints are:
 - GET `/api/v1/admin/moderation/events` to list events in `pending_review`
 - POST `/api/v1/admin/moderation/events/:eventId` with `decision: "approve"`
   or `decision: "reject"`
+- GET `/api/v1/admin/moderation/posts` to list posts with open reports
+- POST `/api/v1/admin/moderation/posts/:postId` with `decision: "dismiss"`
+  or `decision: "hide"`
 
 Approval publishes the event. Rejection requires a note and returns the event to
 the organizer as `rejected`; editing it resets it to `draft` so it can be
@@ -69,6 +74,16 @@ Administrator registration is intentionally unavailable over the public API.
 For local development, set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in
 `backend/.env` before running `npm run db:seed`. The password must contain at
 least 12 characters.
+
+Authenticated feed endpoints are:
+
+- POST `/api/v1/posts` to publish a post with one or more ordered image/video
+  URL records and an optional published event link
+- POST and DELETE `/api/v1/posts/:postId/reactions` to add or remove a like
+- POST `/api/v1/posts/:postId/reports` to report a visible post
+
+Reaction writes are idempotent. Authors cannot report their own posts. Hiding a
+reported post removes it from public feed, detail, and search responses.
 
 List responses expose the next cursor in `meta.nextCursor`. Event detail reads
 only return published events.

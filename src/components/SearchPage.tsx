@@ -17,6 +17,7 @@ import {
 import { toEventTicketConfig } from "../api/event-ticket";
 import { type ApiEvent, fetchEvents } from "../api/events";
 import { type ApiVenue, fetchVenues } from "../api/venues";
+import { type ApiPost, fetchPosts } from "../api/posts";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 import PaymentPage from "./PaymentPage";
@@ -25,12 +26,13 @@ import TicketConfigPage, {
   type TicketConfig,
 } from "./TicketConfigPage";
 
-type SearchCategory = "all" | "events" | "venues";
+type SearchCategory = "all" | "events" | "venues" | "posts";
 
 const CATEGORIES: { label: string; value: SearchCategory }[] = [
   { label: "All", value: "all" },
   { label: "Events", value: "events" },
   { label: "Venues", value: "venues" },
+  { label: "Posts", value: "posts" },
 ];
 
 const VENUE_IMAGES = [
@@ -60,7 +62,18 @@ interface VenueSearchCard {
   venue: ApiVenue;
 }
 
-type SearchCard = EventSearchCard | VenueSearchCard;
+interface PostSearchCard {
+  id: string;
+  kind: "post";
+  title: string;
+  subtitle: string;
+  image: ImageSourcePropType;
+  height: number;
+  tag: string;
+  post: ApiPost;
+}
+
+type SearchCard = EventSearchCard | VenueSearchCard | PostSearchCard;
 
 function eventCard(event: ApiEvent, index: number): EventSearchCard {
   const ticket = toEventTicketConfig(event);
@@ -97,13 +110,31 @@ function venueCard(venue: ApiVenue, index: number): VenueSearchCard {
   };
 }
 
-function combineCards(events: EventSearchCard[], venues: VenueSearchCard[]) {
+function postCard(post: ApiPost, index: number): PostSearchCard {
+  return {
+    id: `post-${post.id}`,
+    kind: "post",
+    title: post.author.name,
+    subtitle: post.caption,
+    image: { uri: post.media[0].url },
+    height: 250 + (index % 3) * 30,
+    tag: "Post",
+    post,
+  };
+}
+
+function combineCards(
+  events: EventSearchCard[],
+  venues: VenueSearchCard[],
+  posts: PostSearchCard[],
+) {
   const cards: SearchCard[] = [];
-  const count = Math.max(events.length, venues.length);
+  const count = Math.max(events.length, venues.length, posts.length);
 
   for (let index = 0; index < count; index += 1) {
     if (events[index]) cards.push(events[index]);
     if (venues[index]) cards.push(venues[index]);
+    if (posts[index]) cards.push(posts[index]);
   }
 
   return cards;
@@ -122,6 +153,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
   const [query, setQuery] = useState("");
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [venues, setVenues] = useState<ApiVenue[]>([]);
+  const [posts, setPosts] = useState<ApiPost[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [retryKey, setRetryKey] = useState(0);
@@ -132,8 +164,9 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
     const controller = new AbortController();
     const timeout = setTimeout(() => {
       const search = query.trim() || undefined;
-      const includeEvents = selectedCategory !== "venues";
-      const includeVenues = selectedCategory !== "events";
+      const includeEvents = selectedCategory === "all" || selectedCategory === "events";
+      const includeVenues = selectedCategory === "all" || selectedCategory === "venues";
+      const includePosts = selectedCategory === "all" || selectedCategory === "posts";
 
       void Promise.all([
         includeEvents
@@ -142,10 +175,14 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
         includeVenues
           ? fetchVenues({ q: search, signal: controller.signal })
           : Promise.resolve([]),
+        includePosts
+          ? fetchPosts({ q: search, signal: controller.signal })
+          : Promise.resolve([]),
       ])
-        .then(([eventResults, venueResults]) => {
+        .then(([eventResults, venueResults, postResults]) => {
           setEvents(eventResults);
           setVenues(venueResults);
+          setPosts(postResults);
           setErrorMessage("");
           setLoadState("ready");
         })
@@ -196,12 +233,15 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
 
   const eventCards = events.map(eventCard);
   const venueCards = venues.map(venueCard);
+  const postCards = posts.map(postCard);
   const results =
     selectedCategory === "events"
       ? eventCards
       : selectedCategory === "venues"
         ? venueCards
-        : combineCards(eventCards, venueCards);
+        : selectedCategory === "posts"
+          ? postCards
+          : combineCards(eventCards, venueCards, postCards);
   const columns: SearchCard[][] = Array.from({ length: columnCount }, () => []);
   results.forEach((result, index) => columns[index % columnCount].push(result));
 
@@ -223,6 +263,8 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
       return;
     }
 
+    if (result.kind === "post") return;
+
     setQuery(result.venue.name);
     setSelectedCategory("events");
     setLoadState("loading");
@@ -237,7 +279,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
     >
       <Feather name="search" size={20} color={colors.inkMuted} />
       <TextInput
-        placeholder="Search events and venues..."
+        placeholder="Search events, venues and posts..."
         placeholderTextColor={colors.inkMuted}
         value={query}
         onChangeText={updateQuery}
@@ -362,7 +404,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
         <View style={styles.statePanel}>
           <Feather name="search" size={28} color={colors.inkMuted} />
           <Text style={[styles.stateText, { color: colors.inkMuted }]}>
-            No events or venues match your search.
+            No events, venues or posts match your search.
           </Text>
         </View>
       )}
@@ -387,6 +429,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
                   <Pressable
                     key={result.id}
                     style={styles.pinWrap}
+                    disabled={result.kind === "post"}
                     onPress={() => openResult(result)}
                   >
                     <View
@@ -401,7 +444,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
                           style={[styles.pinImage, { height: result.height }]}
                           resizeMode="cover"
                         />
-                        <View style={styles.actionOverlay}>
+                        {result.kind !== "post" && <View style={styles.actionOverlay}>
                           <View style={[styles.actionBtn, { backgroundColor: colors.gold }]}>
                             <Text
                               style={[
@@ -412,7 +455,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
                               {result.kind === "event" ? "Tickets" : "View events"}
                             </Text>
                           </View>
-                        </View>
+                        </View>}
                         <View
                           style={[styles.tagPill, { backgroundColor: colors.black + "CC" }]}
                         >

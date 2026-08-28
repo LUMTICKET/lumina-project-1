@@ -21,6 +21,11 @@ import {
   moderateEvent,
 } from "../api/moderation";
 import {
+  fetchPostModerationQueue,
+  moderatePost,
+  type ReportedApiPost,
+} from "../api/posts";
+import {
   createEventDraft,
   fetchOrganizerEvents,
   submitEventDraft,
@@ -1564,6 +1569,7 @@ export default function Create({
 function ModerationPanel({ token }: { token: string }) {
   const { colors } = useLumTheme();
   const [events, setEvents] = useState<ApiEvent[]>([]);
+  const [reportedPosts, setReportedPosts] = useState<ReportedApiPost[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
@@ -1571,8 +1577,14 @@ function ModerationPanel({ token }: { token: string }) {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetchEventModerationQueue(token, controller.signal)
-      .then(setEvents)
+    void Promise.all([
+      fetchEventModerationQueue(token, controller.signal),
+      fetchPostModerationQueue(token, controller.signal),
+    ])
+      .then(([eventItems, postItems]) => {
+        setEvents(eventItems);
+        setReportedPosts(postItems);
+      })
       .catch((error) => {
         if (!controller.signal.aborted) {
           setErrorMessage(
@@ -1611,6 +1623,34 @@ function ModerationPanel({ token }: { token: string }) {
     }
   };
 
+  const reviewPost = async (
+    post: ReportedApiPost,
+    decision: "dismiss" | "hide",
+  ) => {
+    const note = notes[post.id]?.trim() ?? "";
+    if (decision === "hide" && note.length < 10) {
+      setErrorMessage("A hide-post note must contain at least 10 characters.");
+      return;
+    }
+
+    setReviewingId(post.id);
+    setErrorMessage("");
+    try {
+      await moderatePost(
+        post.id,
+        decision === "hide"
+          ? { decision, note }
+          : { decision, ...(note ? { note } : {}) },
+        token,
+      );
+      setReportedPosts((current) => current.filter((item) => item.id !== post.id));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "The review could not be saved.");
+    } finally {
+      setReviewingId(null);
+    }
+  };
+
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
       <View
@@ -1621,7 +1661,7 @@ function ModerationPanel({ token }: { token: string }) {
       >
         <View style={{ width: 40 }} />
         <Text style={[styles.headerTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
-          Event Moderation
+          Content Moderation
         </Text>
         <View style={{ width: 40 }} />
       </View>
@@ -1630,16 +1670,21 @@ function ModerationPanel({ token }: { token: string }) {
         showsVerticalScrollIndicator={false}
       >
         {loading && <ActivityIndicator color={colors.gold} size="large" />}
-        {!loading && events.length === 0 && (
+        {!loading && events.length === 0 && reportedPosts.length === 0 && (
           <View style={styles.gate}>
             <Feather name="check-circle" size={42} color={colors.gold} />
             <Text style={[styles.successTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
               Queue is clear
             </Text>
             <Text style={[styles.successSub, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
-              There are no events waiting for review.
+              There are no events or reported posts waiting for review.
             </Text>
           </View>
+        )}
+        {events.length > 0 && (
+          <Text style={[styles.sectionLabel, { color: colors.ink, fontFamily: fontFamilies.bodySemi }]}>
+            Events awaiting publication
+          </Text>
         )}
         {events.map((event) => (
           <View
@@ -1697,6 +1742,80 @@ function ModerationPanel({ token }: { token: string }) {
                 ) : (
                   <Text style={{ color: colors.white, fontFamily: fontFamilies.bodySemi }}>
                     Approve & Publish
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </View>
+        ))}
+        {reportedPosts.length > 0 && (
+          <Text style={[styles.sectionLabel, { color: colors.ink, fontFamily: fontFamilies.bodySemi }]}>
+            Reported feed posts
+          </Text>
+        )}
+        {reportedPosts.map((post) => (
+          <View
+            key={post.id}
+            style={[
+              styles.moderationCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.successTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+              {post.author.name}
+            </Text>
+            <Text style={{ color: colors.ink, fontFamily: fontFamilies.body }}>
+              {post.caption}
+            </Text>
+            {!!post.media[0] && post.media[0].type === "image" && (
+              <Image
+                source={{ uri: post.media[0].url }}
+                style={styles.moderationPostImage}
+                resizeMode="cover"
+              />
+            )}
+            <Text style={[styles.historyMeta, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+              {post.reports.length} open {post.reports.length === 1 ? "report" : "reports"} ·{" "}
+              {post.reports.map((report) => report.reason).join(", ")}
+            </Text>
+            <TextInput
+              multiline
+              placeholder="Moderator note (required when hiding)"
+              placeholderTextColor={colors.inkMuted}
+              value={notes[post.id] ?? ""}
+              onChangeText={(note) =>
+                setNotes((current) => ({ ...current, [post.id]: note }))
+              }
+              style={[
+                styles.moderationInput,
+                {
+                  color: colors.ink,
+                  backgroundColor: colors.bg,
+                  borderColor: colors.border,
+                  fontFamily: fontFamilies.body,
+                },
+              ]}
+            />
+            <View style={styles.moderationActions}>
+              <Pressable
+                disabled={reviewingId === post.id}
+                onPress={() => void reviewPost(post, "dismiss")}
+                style={[styles.reviewBtn, { borderColor: colors.border }]}
+              >
+                <Text style={{ color: colors.ink, fontFamily: fontFamilies.bodySemi }}>
+                  Dismiss Reports
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={reviewingId === post.id}
+                onPress={() => void reviewPost(post, "hide")}
+                style={[styles.reviewBtn, { backgroundColor: "#DC2626", borderColor: "#DC2626" }]}
+              >
+                {reviewingId === post.id ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={{ color: colors.white, fontFamily: fontFamilies.bodySemi }}>
+                    Hide Post
                   </Text>
                 )}
               </Pressable>
@@ -1849,6 +1968,11 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     padding: spacing(3),
     textAlignVertical: "top",
+  },
+  moderationPostImage: {
+    width: "100%",
+    height: 220,
+    borderRadius: radii.lg,
   },
   moderationActions: {
     flexDirection: "row",

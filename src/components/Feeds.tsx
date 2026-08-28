@@ -15,8 +15,18 @@ import {
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
+import {
+  createPost,
+  fetchPosts,
+  likePost,
+  reportPost,
+  unlikePost,
+  type ApiPost,
+} from "../api/posts";
+import type { AccountType } from "../api/auth";
+import { useAuth } from "../auth/AuthContext";
 
-const POSTS = [
+/*
   {
     id: "p1",
     company: "Landlord Entertainment",
@@ -121,7 +131,7 @@ const POSTS = [
     location: "Lekki–Epe Expressway",
     tags: ["Scenic", "Weekend", "Bus"],
   },
-];
+*/
 
 /* ------------------------------------------------------------------ */
 // Video player
@@ -205,15 +215,23 @@ function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
 /* ------------------------------------------------------------------ */
 // Post card
 /* ------------------------------------------------------------------ */
-function PostCard({ post }: { post: (typeof POSTS)[number] }) {
+function PostCard({
+  post,
+  onToggleLike,
+  onReport,
+}: {
+  post: ApiPost;
+  onToggleLike: (post: ApiPost) => void;
+  onReport: (post: ApiPost) => void;
+}) {
   const { colors } = useLumTheme();
-  const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
+  const [showReport, setShowReport] = useState(false);
 
-  const mediaSource =
-    typeof post.media === "string" ? { uri: post.media } : post.media;
+  const primaryMedia = post.media[0];
+  const mediaSource = { uri: primaryMedia.url };
 
   return (
     <View
@@ -229,7 +247,13 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Image source={{ uri: post.avatar }} style={styles.avatar} />
+          {post.author.avatarUrl ? (
+            <Image source={{ uri: post.author.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.bgAlt }]}>
+              <Feather name="user" size={18} color={colors.inkMuted} />
+            </View>
+          )}
           <View>
             <Text
               style={[
@@ -237,7 +261,7 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
                 { color: colors.ink, fontFamily: fontFamilies.bodySemi },
               ]}
             >
-              {post.company}
+              {post.author.name}
             </Text>
             <Text
               style={[
@@ -245,18 +269,32 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
                 { color: colors.inkMuted, fontFamily: fontFamilies.body },
               ]}
             >
-              {post.location}
+              {post.location ?? "Malawi"}
             </Text>
           </View>
         </View>
-        <Pressable>
+        <Pressable onPress={() => setShowReport((current) => !current)}>
           <Feather name="more-horizontal" size={20} color={colors.inkMuted} />
         </Pressable>
       </View>
+      {showReport && (
+        <Pressable
+          onPress={() => {
+            onReport(post);
+            setShowReport(false);
+          }}
+          style={[styles.reportAction, { borderColor: colors.border }]}
+        >
+          <Feather name="flag" size={15} color="#DC2626" />
+          <Text style={{ color: "#DC2626", fontFamily: fontFamilies.bodySemi }}>
+            Report misleading content
+          </Text>
+        </Pressable>
+      )}
 
       {/* Media */}
       <View style={styles.mediaWrap}>
-        {post.isVideo ? (
+        {primaryMedia.type === "video" ? (
           <VideoPost source={mediaSource} isMuted={isMuted} />
         ) : (
           <Image
@@ -266,7 +304,7 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
           />
         )}
 
-        {post.isVideo && (
+        {primaryMedia.type === "video" && (
           <Pressable
             style={[styles.muteBtn, { backgroundColor: colors.black + "AA" }]}
             onPress={() => setIsMuted(!isMuted)}
@@ -283,11 +321,11 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
       {/* Action Bar */}
       <View style={styles.actionBar}>
         <View style={styles.actionLeft}>
-          <Pressable onPress={() => setLiked(!liked)} style={styles.actionBtn}>
+          <Pressable onPress={() => onToggleLike(post)} style={styles.actionBtn}>
             <Feather
-              name={liked ? "heart" : "heart"}
+              name="heart"
               size={24}
-              color={liked ? "#E60023" : colors.ink}
+              color={post.viewerHasReacted ? "#E60023" : colors.ink}
             />
           </Pressable>
           <Pressable style={styles.actionBtn}>
@@ -314,7 +352,7 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
             { color: colors.ink, fontFamily: fontFamilies.bodySemi },
           ]}
         >
-          {post.likes.toLocaleString()} likes
+          {post.reactionCount.toLocaleString()} likes
         </Text>
       </View>
 
@@ -327,7 +365,7 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
               { color: colors.ink, fontFamily: fontFamilies.bodySemi },
             ]}
           >
-            {post.company}{" "}
+            {post.author.name}{" "}
           </Text>
           <Text
             style={[
@@ -354,8 +392,8 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
       </View>
 
       {/* Ticket Info Chips */}
-      <View style={styles.chipRow}>
-        <View style={[styles.chip, { backgroundColor: colors.gold + "18" }]}>
+      {(post.priceLabel || post.dateLabel) && <View style={styles.chipRow}>
+        {!!post.priceLabel && <View style={[styles.chip, { backgroundColor: colors.gold + "18" }]}>
           <Feather name="tag" size={12} color={colors.gold} />
           <Text
             style={[
@@ -363,10 +401,10 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
               { color: colors.gold, fontFamily: fontFamilies.bodySemi },
             ]}
           >
-            {post.price}
+            {post.priceLabel}
           </Text>
-        </View>
-        <View style={[styles.chip, { backgroundColor: colors.bgAlt }]}>
+        </View>}
+        {!!post.dateLabel && <View style={[styles.chip, { backgroundColor: colors.bgAlt }]}>
           <Feather name="calendar" size={12} color={colors.inkMuted} />
           <Text
             style={[
@@ -374,10 +412,10 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
               { color: colors.inkMuted, fontFamily: fontFamilies.body },
             ]}
           >
-            {post.date}
+            {post.dateLabel}
           </Text>
-        </View>
-      </View>
+        </View>}
+      </View>}
 
       {/* Tags */}
       <View style={styles.tagRow}>
@@ -395,7 +433,7 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
       </View>
 
       {/* CTA */}
-      <Pressable style={[styles.ctaBtn, { backgroundColor: colors.gold }]}>
+      {!!post.event && <Pressable style={[styles.ctaBtn, { backgroundColor: colors.gold }]}>
         <Feather name="tag" size={16} color={colors.white} />
         <Text
           style={[
@@ -405,7 +443,7 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
         >
           Get Tickets
         </Text>
-      </Pressable>
+      </Pressable>}
     </View>
   );
 }
@@ -413,25 +451,112 @@ function PostCard({ post }: { post: (typeof POSTS)[number] }) {
 /* ------------------------------------------------------------------ */
 // Main screen
 /* ------------------------------------------------------------------ */
-export default function Feeds() {
+export default function Feeds({
+  onOpenAuth,
+}: {
+  onOpenAuth?: (accountType?: AccountType) => void;
+}) {
   const { colors } = useLumTheme();
+  const auth = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
   const [query, setQuery] = useState("");
+  const [posts, setPosts] = useState<ApiPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [notice, setNotice] = useState("");
+  const [showComposer, setShowComposer] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [posting, setPosting] = useState(false);
 
-  const filteredPosts = POSTS.filter((post) => {
-    const haystack = [
-      post.company,
-      post.caption,
-      post.location,
-      post.date,
-      ...post.tags,
-    ]
-      .join(" ")
-      .toLowerCase();
+  useEffect(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      setLoading(true);
+      void fetchPosts({
+        q: query.trim() || undefined,
+        token: auth.token,
+        signal: controller.signal,
+      })
+        .then((items) => {
+          setPosts(items);
+          setErrorMessage("");
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted) {
+            setErrorMessage(error instanceof Error ? error.message : "Posts could not be loaded.");
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoading(false);
+        });
+    }, 300);
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [auth.token, query]);
 
-    return haystack.includes(query.toLowerCase());
-  });
+  const openComposer = () => {
+    if (!auth.token) {
+      onOpenAuth?.();
+      return;
+    }
+    setShowComposer((current) => !current);
+  };
+
+  const submitPost = async () => {
+    if (!auth.token || !caption.trim() || !mediaUrl.trim()) return;
+    setPosting(true);
+    setErrorMessage("");
+    try {
+      const post = await createPost(
+        {
+          caption: caption.trim(),
+          tags: [],
+          media: [{ type: "image", url: mediaUrl.trim() }],
+        },
+        auth.token,
+      );
+      setPosts((current) => [post, ...current]);
+      setCaption("");
+      setMediaUrl("");
+      setShowComposer(false);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "The post could not be created.");
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const toggleLike = async (post: ApiPost) => {
+    if (!auth.token) {
+      onOpenAuth?.();
+      return;
+    }
+    try {
+      const updated = post.viewerHasReacted
+        ? await unlikePost(post.id, auth.token)
+        : await likePost(post.id, auth.token);
+      setPosts((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "The reaction could not be saved.");
+    }
+  };
+
+  const report = async (post: ApiPost) => {
+    if (!auth.token) {
+      onOpenAuth?.();
+      return;
+    }
+    try {
+      await reportPost(post.id, { reason: "misleading" }, auth.token);
+      setNotice("Report submitted for review.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "The report could not be submitted.");
+    }
+  };
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
@@ -456,7 +581,7 @@ export default function Feeds() {
         {/* Mobile: plain plus icon above search, RIGHT aligned */}
         {!isDesktop && (
           <View style={styles.mobileTopRow}>
-            <Pressable style={styles.plusBtnMobile}>
+            <Pressable onPress={openComposer} style={styles.plusBtnMobile}>
               <Feather name="plus" size={24} color={colors.ink} />
             </Pressable>
           </View>
@@ -496,7 +621,7 @@ export default function Feeds() {
               )}
             </View>
 
-            <Pressable style={styles.plusBtnDesktop}>
+            <Pressable onPress={openComposer} style={styles.plusBtnDesktop}>
               <Feather name="plus" size={24} color={colors.ink} />
             </Pressable>
           </View>
@@ -533,6 +658,88 @@ export default function Feeds() {
         )}
       </View>
 
+      {showComposer && (
+        <View
+          style={[
+            styles.composer,
+            {
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              maxWidth: isDesktop ? 560 : undefined,
+            },
+          ]}
+        >
+          <Text style={[styles.composerTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+            Create a post
+          </Text>
+          <TextInput
+            multiline
+            placeholder="What would you like to share?"
+            placeholderTextColor={colors.inkMuted}
+            value={caption}
+            onChangeText={setCaption}
+            style={[
+              styles.composerInput,
+              {
+                color: colors.ink,
+                backgroundColor: colors.bg,
+                borderColor: colors.border,
+                fontFamily: fontFamilies.body,
+              },
+            ]}
+          />
+          <TextInput
+            autoCapitalize="none"
+            keyboardType="url"
+            placeholder="Image URL"
+            placeholderTextColor={colors.inkMuted}
+            value={mediaUrl}
+            onChangeText={setMediaUrl}
+            style={[
+              styles.mediaUrlInput,
+              {
+                color: colors.ink,
+                backgroundColor: colors.bg,
+                borderColor: colors.border,
+                fontFamily: fontFamilies.body,
+              },
+            ]}
+          />
+          <Pressable
+            disabled={posting || !caption.trim() || !mediaUrl.trim()}
+            onPress={() => void submitPost()}
+            style={[
+              styles.composerSubmit,
+              {
+                backgroundColor: colors.gold,
+                opacity: posting || !caption.trim() || !mediaUrl.trim() ? 0.55 : 1,
+              },
+            ]}
+          >
+            {posting ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={{ color: colors.white, fontFamily: fontFamilies.bodySemi }}>
+                Publish Post
+              </Text>
+            )}
+          </Pressable>
+        </View>
+      )}
+
+      {!!notice && (
+        <Pressable onPress={() => setNotice("")}>
+          <Text style={[styles.noticeText, { color: "#059669", fontFamily: fontFamilies.body }]}>
+            {notice}
+          </Text>
+        </Pressable>
+      )}
+      {!!errorMessage && (
+        <Text style={[styles.noticeText, { color: "#DC2626", fontFamily: fontFamilies.body }]}>
+          {errorMessage}
+        </Text>
+      )}
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={[
@@ -545,7 +752,20 @@ export default function Feeds() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {filteredPosts.map((post) => (
+        {loading && posts.length === 0 && (
+          <View style={styles.statePanel}>
+            <ActivityIndicator color={colors.gold} size="large" />
+          </View>
+        )}
+        {!loading && posts.length === 0 && (
+          <View style={styles.statePanel}>
+            <Feather name="inbox" size={30} color={colors.inkMuted} />
+            <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body }}>
+              No posts match your search.
+            </Text>
+          </View>
+        )}
+        {posts.map((post) => (
           <View
             key={post.id}
             style={[
@@ -560,7 +780,11 @@ export default function Feeds() {
               },
             ]}
           >
-            <PostCard post={post} />
+            <PostCard
+              post={post}
+              onToggleLike={(item) => void toggleLike(item)}
+              onReport={(item) => void report(item)}
+            />
           </View>
         ))}
       </ScrollView>
@@ -602,6 +826,65 @@ const styles = StyleSheet.create({
   },
   plusBtnDesktop: {
     padding: spacing(1.5),
+  },
+  composer: {
+    width: "100%",
+    alignSelf: "center",
+    borderWidth: 1,
+    borderRadius: radii.xl,
+    padding: spacing(4),
+    gap: spacing(3),
+    marginVertical: spacing(3),
+  },
+  composerTitle: { fontSize: 19 },
+  composerInput: {
+    minHeight: 110,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing(3),
+    textAlignVertical: "top",
+  },
+  mediaUrlInput: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing(3),
+  },
+  composerSubmit: {
+    alignSelf: "flex-end",
+    borderRadius: radii.full,
+    paddingHorizontal: spacing(5),
+    paddingVertical: spacing(3),
+    minWidth: 140,
+    alignItems: "center",
+  },
+  noticeText: {
+    maxWidth: 560,
+    width: "100%",
+    alignSelf: "center",
+    paddingHorizontal: spacing(4),
+    paddingVertical: spacing(2),
+    textAlign: "center",
+  },
+  statePanel: {
+    minHeight: 260,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing(3),
+  },
+  avatarFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportAction: {
+    marginHorizontal: spacing(4),
+    marginBottom: spacing(2),
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing(3),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(2),
   },
   searchBar: {
     width: "100%",

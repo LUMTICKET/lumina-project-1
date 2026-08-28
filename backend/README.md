@@ -46,12 +46,29 @@ scrypt.
 Organizer-only event workflow endpoints are:
 
 - POST `/api/v1/events` to save a draft owned by the authenticated organizer
+- PATCH `/api/v1/events/:eventId` to update an owned `draft` or `rejected`
+  event
 - GET `/api/v1/organizer/events` to list that organizer's events
 - POST `/api/v1/events/:eventId/submit` to move an owned draft to
   `pending_review`
 
 Public event reads return published events only. Draft and moderation states are
 available only through the organizer-owned endpoint.
+
+Administrator moderation endpoints are:
+
+- GET `/api/v1/admin/moderation/events` to list events in `pending_review`
+- POST `/api/v1/admin/moderation/events/:eventId` with `decision: "approve"`
+  or `decision: "reject"`
+
+Approval publishes the event. Rejection requires a note and returns the event to
+the organizer as `rejected`; editing it resets it to `draft` so it can be
+submitted again.
+
+Administrator registration is intentionally unavailable over the public API.
+For local development, set `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` in
+`backend/.env` before running `npm run db:seed`. The password must contain at
+least 12 characters.
 
 List responses expose the next cursor in `meta.nextCursor`. Event detail reads
 only return published events.

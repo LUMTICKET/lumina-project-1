@@ -156,10 +156,11 @@ The app loads a single landing page and renders one of the route components base
 Each route component uses the theme provider for colors and styles, and several screens implement responsive column layouts depending on screen width.
 
 The Expo app consumes the Next.js API for event discovery, venue search,
-authentication, and organizer-owned event drafts. Organizer sessions use secure
-device storage on native platforms and guarded browser storage on web. Bus,
-flight, tourism, delivery, and feed creation remain staged for backend
-integration.
+authentication, organizer-owned event drafts, draft editing, and event
+moderation. Organizers can address rejection notes and resubmit; administrators
+review submissions from the Create route. Organizer sessions use secure device
+storage on native platforms and guarded browser storage on web. Bus, flight,
+tourism, delivery, and feed creation remain staged for backend integration.
 
 
 2. Create a feature branch.

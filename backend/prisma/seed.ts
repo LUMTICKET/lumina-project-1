@@ -1,4 +1,10 @@
-import { EventStatus, PrismaClient, UserRole } from "@prisma/client";
+import {
+  EventStatus,
+  PostMediaType,
+  PostStatus,
+  PrismaClient,
+  UserRole,
+} from "@prisma/client";
 import { hashPassword } from "../src/modules/auth/password";
 
 const prisma = new PrismaClient();
@@ -32,6 +38,17 @@ async function main() {
     });
   }
 
+  const feedAuthor = await prisma.user.upsert({
+    where: { email: "seed-feed@lumina.local" },
+    update: { name: "Saba's Kitchen", role: UserRole.ORGANIZER },
+    create: {
+      email: "seed-feed@lumina.local",
+      name: "Saba's Kitchen",
+      passwordHash: "disabled$seed$account",
+      role: UserRole.ORGANIZER,
+    },
+  });
+
   const sulom = await prisma.organizer.upsert({
     where: { id: "org-sulom" },
     update: {
@@ -47,10 +64,12 @@ async function main() {
     where: { id: "org-sabas-kitchen" },
     update: {
       name: "Saba's Kitchen",
+      ownerId: feedAuthor.id,
     },
     create: {
       id: "org-sabas-kitchen",
       name: "Saba's Kitchen",
+      ownerId: feedAuthor.id,
     },
   });
 
@@ -190,6 +209,82 @@ async function main() {
       where: { id: tier.id },
       update: tier,
       create: tier,
+    });
+  }
+
+  const posts = [
+    {
+      id: "post-food-fest",
+      caption:
+        "Lilongwe Food Fest brings together local favourites, international flavours, chef demonstrations, and a full weekend of live entertainment.",
+      location: "Portuguese Club, Lilongwe",
+      priceLabel: "MWK 5,000",
+      dateLabel: "30 Aug 2026",
+      tags: ["Food", "Festival", "Lilongwe"],
+      eventId: "evt-2",
+      mediaId: "media-post-food-fest",
+      mediaUrl:
+        "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1200&auto=format&fit=crop",
+      altText: "Food served at an outdoor festival",
+    },
+    {
+      id: "post-matchday",
+      caption:
+        "Matchday is calling. Secure your seat for Dedza Dynamos versus FCB Nyasa Big Bullets and experience the FDH Premiership atmosphere.",
+      location: "Bingu National Stadium, Lilongwe",
+      priceLabel: "From MWK 4,000",
+      dateLabel: "31 May 2026",
+      tags: ["Football", "Matchday", "Lilongwe"],
+      eventId: "evt-1",
+      mediaId: "media-post-matchday",
+      mediaUrl:
+        "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1200&auto=format&fit=crop",
+      altText: "Football stadium during a match",
+    },
+  ];
+
+  for (const post of posts) {
+    await prisma.post.upsert({
+      where: { id: post.id },
+      update: {
+        authorId: feedAuthor.id,
+        eventId: post.eventId,
+        caption: post.caption,
+        location: post.location,
+        priceLabel: post.priceLabel,
+        dateLabel: post.dateLabel,
+        tags: post.tags,
+        status: PostStatus.PUBLISHED,
+      },
+      create: {
+        id: post.id,
+        authorId: feedAuthor.id,
+        eventId: post.eventId,
+        caption: post.caption,
+        location: post.location,
+        priceLabel: post.priceLabel,
+        dateLabel: post.dateLabel,
+        tags: post.tags,
+        status: PostStatus.PUBLISHED,
+      },
+    });
+    await prisma.postMedia.upsert({
+      where: { id: post.mediaId },
+      update: {
+        postId: post.id,
+        type: PostMediaType.IMAGE,
+        url: post.mediaUrl,
+        altText: post.altText,
+        sortOrder: 0,
+      },
+      create: {
+        id: post.mediaId,
+        postId: post.id,
+        type: PostMediaType.IMAGE,
+        url: post.mediaUrl,
+        altText: post.altText,
+        sortOrder: 0,
+      },
     });
   }
 }

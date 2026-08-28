@@ -20,14 +20,23 @@ export async function POST(request: Request, context: SubmitRouteContext) {
 
   const { eventId } = await context.params;
   try {
-    const event = await submitEventForReview(eventId, auth.user.organizer.id);
-    if (!event) {
+    const result = await submitEventForReview(eventId, auth.user.organizer.id);
+    if (result.kind === "not_found") {
       return fail(
         { code: "DRAFT_NOT_FOUND", message: "An owned event draft was not found." },
         404,
       );
     }
-    return ok(event);
+    if (result.kind === "not_editable") {
+      return fail(
+        {
+          code: "EVENT_NOT_SUBMITTABLE",
+          message: "Only draft or rejected events can be submitted.",
+        },
+        409,
+      );
+    }
+    return ok(result.event);
   } catch (error) {
     console.error(`Unable to submit event ${eventId}`, error);
     return fail(

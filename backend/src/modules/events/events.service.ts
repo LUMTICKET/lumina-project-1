@@ -1,6 +1,10 @@
 import { EventStatus, Prisma } from "@prisma/client";
-import type { EventListQuery } from "@/contracts/events";
-import type { CreateEventInput } from "@/contracts/events";
+import type {
+  CreateEventInput,
+  EventListQuery,
+  ModerateEventInput,
+  UpdateEventInput,
+} from "@/contracts/events";
 import { prisma } from "@/lib/prisma";
 
 const eventInclude = {
@@ -47,6 +51,14 @@ function mapEvent(event: EventWithRelations) {
       available: tier.available,
       perks: tier.perks,
     })),
+  };
+}
+
+function mapManagedEvent(event: EventWithRelations) {
+  return {
+    ...mapEvent(event),
+    moderationNote: event.moderationNote,
+    reviewedAt: event.reviewedAt?.toISOString() ?? null,
   };
 }
 
@@ -141,19 +153,148 @@ export async function listOrganizerEvents(organizerId: string) {
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
   });
 
-  return events.map(mapEvent);
+  return events.map(mapManagedEvent);
 }
 
 export async function submitEventForReview(eventId: string, organizerId: string) {
-  const updated = await prisma.event.updateMany({
-    where: { id: eventId, organizerId, status: EventStatus.DRAFT },
+  const ownedEvent = await prisma.event.findFirst({
+    where: { id: eventId, organizerId },
+    select: { status: true },
+  });
+  if (!ownedEvent) return { kind: "not_found" as const };
+  if (
+    ownedEvent.status !== EventStatus.DRAFT &&
+    ownedEvent.status !== EventStatus.REJECTED
+  ) {
+    return { kind: "not_editable" as const };
+  }
+
+  await prisma.event.update({
+    where: { id: eventId },
     data: { status: EventStatus.PENDING_REVIEW },
   });
-  if (updated.count === 0) return null;
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: eventInclude,
   });
-  return event ? mapEvent(event) : null;
+  return event
+    ? { kind: "updated" as const, event: mapManagedEvent(event) }
+    : { kind: "not_found" as const };
+}
+
+export async function updateEventDraft(
+  eventId: string,
+  organizerId: string,
+  input: UpdateEventInput,
+) {
+  const existing = await prisma.event.findFirst({
+    where: { id: eventId, organizerId },
+    select: { status: true, startsAt: true, endsAt: true },
+  });
+  if (!existing) return { kind: "not_found" as const };
+  if (
+    existing.status !== EventStatus.DRAFT &&
+    existing.status !== EventStatus.REJECTED
+  ) {
+    return { kind: "not_editable" as const };
+  }
+
+  if (input.venueId) {
+    const venue = await prisma.venue.findUnique({
+      where: { id: input.venueId },
+      select: { id: true },
+    });
+    if (!venue) return { kind: "venue_not_found" as const };
+  }
+
+  const startsAt = input.startsAt ? new Date(input.startsAt) : existing.startsAt;
+  const endsAt =
+    input.endsAt === null
+      ? null
+      : input.endsAt
+        ? new Date(input.endsAt)
+        : existing.endsAt;
+  if (endsAt && endsAt <= startsAt) {
+    return { kind: "invalid_schedule" as const };
+  }
+
+  const event = await prisma.event.update({
+    where: { id: eventId },
+    data: {
+      ...(input.title !== undefined ? { title: input.title } : {}),
+      ...(input.subtitle !== undefined ? { subtitle: input.subtitle } : {}),
+      ...(input.venueId !== undefined ? { venueId: input.venueId } : {}),
+      ...(input.startsAt !== undefined ? { startsAt } : {}),
+      ...(input.endsAt !== undefined ? { endsAt } : {}),
+      ...(input.description !== undefined
+        ? { description: input.description }
+        : {}),
+      ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
+      ...(input.tags !== undefined ? { tags: input.tags } : {}),
+      ...(input.maxPerUser !== undefined
+        ? { maxPerUser: input.maxPerUser }
+        : {}),
+      ...(input.ticketTiers
+        ? {
+            ticketTiers: {
+              deleteMany: {},
+              create: input.ticketTiers.map((tier) => ({
+                name: tier.name,
+                priceMinor: tier.priceMinor,
+                currency: tier.currency,
+                capacity: tier.capacity,
+                available: tier.available ?? tier.capacity,
+                perks: tier.perks,
+              })),
+            },
+          }
+        : {}),
+      status: EventStatus.DRAFT,
+    },
+    include: eventInclude,
+  });
+
+  return { kind: "updated" as const, event: mapManagedEvent(event) };
+}
+
+export async function listPendingModerationEvents() {
+  const events = await prisma.event.findMany({
+    where: { status: EventStatus.PENDING_REVIEW },
+    include: eventInclude,
+    orderBy: [{ updatedAt: "asc" }, { id: "asc" }],
+  });
+
+  return events.map(mapManagedEvent);
+}
+
+export async function moderateEvent(
+  eventId: string,
+  moderatorId: string,
+  input: ModerateEventInput,
+) {
+  const existing = await prisma.event.findUnique({
+    where: { id: eventId },
+    select: { status: true },
+  });
+  if (!existing) return { kind: "not_found" as const };
+  if (existing.status !== EventStatus.PENDING_REVIEW) {
+    return { kind: "not_pending" as const };
+  }
+
+  const event = await prisma.event.update({
+    where: { id: eventId },
+    data: {
+      status:
+        input.decision === "approve"
+          ? EventStatus.PUBLISHED
+          : EventStatus.REJECTED,
+      moderationNote: input.note ?? null,
+      reviewedAt: new Date(),
+      reviewedById: moderatorId,
+    },
+    include: eventInclude,
+  });
+
+  return { kind: "updated" as const, event: mapManagedEvent(event) };
 }

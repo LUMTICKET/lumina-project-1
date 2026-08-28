@@ -4,6 +4,7 @@ export const eventStatuses = [
   "draft",
   "pending_review",
   "published",
+  "rejected",
   "cancelled",
 ] as const;
 
@@ -48,6 +49,35 @@ export const createEventSchema = z
     },
   );
 
+export const updateEventSchema = z
+  .object({
+    title: z.string().trim().min(3).max(160).optional(),
+    subtitle: z.string().trim().max(240).nullable().optional(),
+    venueId: z.string().trim().min(1).optional(),
+    startsAt: z.iso.datetime({ offset: true }).optional(),
+    endsAt: z.iso.datetime({ offset: true }).nullable().optional(),
+    description: z.string().trim().min(10).max(10_000).optional(),
+    imageUrl: z.url().nullable().optional(),
+    tags: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
+    maxPerUser: z.number().int().positive().max(100).optional(),
+    ticketTiers: z.array(ticketTierInputSchema).min(1).max(50).optional(),
+  })
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "At least one event field must be provided",
+  });
+
+export const moderateEventSchema = z.discriminatedUnion("decision", [
+  z.object({
+    decision: z.literal("approve"),
+    note: z.string().trim().max(2_000).optional(),
+  }),
+  z.object({
+    decision: z.literal("reject"),
+    note: z.string().trim().min(10).max(2_000),
+  }),
+]);
+
 export const eventListQuerySchema = z.object({
   q: z.string().trim().max(120).optional(),
   city: z.string().trim().max(120).optional(),
@@ -58,4 +88,6 @@ export const eventListQuerySchema = z.object({
 export type EventStatus = z.infer<typeof eventStatusSchema>;
 export type TicketTierInput = z.infer<typeof ticketTierInputSchema>;
 export type CreateEventInput = z.infer<typeof createEventSchema>;
+export type UpdateEventInput = z.infer<typeof updateEventSchema>;
+export type ModerateEventInput = z.infer<typeof moderateEventSchema>;
 export type EventListQuery = z.infer<typeof eventListQuerySchema>;

@@ -1,10 +1,9 @@
-import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
+import { createHash, randomBytes } from "node:crypto";
 import { Prisma, UserRole } from "@prisma/client";
 import type { LoginInput, RegisterInput } from "@/contracts/auth";
 import { prisma } from "@/lib/prisma";
+import { hashPassword, verifyPassword } from "@/modules/auth/password";
 
-const scryptAsync = promisify(scrypt);
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 const authUserSelect = {
@@ -31,21 +30,6 @@ function userDto(user: AuthUserRecord) {
 
 function tokenHash(token: string) {
   return createHash("sha256").update(token).digest("hex");
-}
-
-async function hashPassword(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  const derived = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `scrypt$${salt}$${derived.toString("hex")}`;
-}
-
-async function verifyPassword(password: string, encoded: string) {
-  const [algorithm, salt, expectedHex] = encoded.split("$");
-  if (algorithm !== "scrypt" || !salt || !expectedHex) return false;
-
-  const expected = Buffer.from(expectedHex, "hex");
-  const actual = (await scryptAsync(password, salt, expected.length)) as Buffer;
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
 async function createSession(userId: string) {

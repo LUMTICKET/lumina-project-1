@@ -1,8 +1,37 @@
-import { EventStatus, PrismaClient } from "@prisma/client";
+import { EventStatus, PrismaClient, UserRole } from "@prisma/client";
+import { hashPassword } from "../src/modules/auth/password";
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const adminEmail = process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if ((adminEmail && !adminPassword) || (!adminEmail && adminPassword)) {
+    throw new Error(
+      "SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD must be provided together.",
+    );
+  }
+  if (adminEmail && adminPassword) {
+    if (adminPassword.length < 12) {
+      throw new Error("SEED_ADMIN_PASSWORD must contain at least 12 characters.");
+    }
+    const passwordHash = await hashPassword(adminPassword);
+    await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: {
+        name: process.env.SEED_ADMIN_NAME?.trim() || "Lumina Administrator",
+        passwordHash,
+        role: UserRole.ADMIN,
+      },
+      create: {
+        email: adminEmail,
+        name: process.env.SEED_ADMIN_NAME?.trim() || "Lumina Administrator",
+        passwordHash,
+        role: UserRole.ADMIN,
+      },
+    });
+  }
+
   const sulom = await prisma.organizer.upsert({
     where: { id: "org-sulom" },
     update: {

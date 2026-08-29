@@ -390,145 +390,133 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
         </View>
       )}
 
-      {/* Mobile search + categories header (sticky) */}
+      {/* Mobile search */}
       {!isDesktop && (
-        <View style={{ zIndex: 100, elevation: 100 }}>
-          <View
-            style={[
-              styles.mobileSearchWrap,
-              {
-                paddingHorizontal: spacing(3),
-                paddingTop: spacing(3),
-                paddingBottom: spacing(2),
-                zIndex: 1,
-                elevation: 1,
-              },
-            ]}
-          >
-            <View style={styles.mobileActionRow}>
-              {isSearchOpen && (
-                <View
+        <View
+          style={[
+            styles.mobileSearchWrap,
+            {
+              paddingHorizontal: spacing(3),
+              paddingTop: spacing(3),
+              zIndex: 1,
+              elevation: 1,
+            },
+          ]}
+        >
+          <View style={styles.mobileActionRow}>
+            {isSearchOpen && (
+              <View
+                style={[
+                  styles.mobileSearchExpander,
+                  {
+                    backgroundColor: colors.bgAlt,
+                    borderColor: colors.gold,
+                    width: mobileSearchWidth,
+                    zIndex: 25,
+                    elevation: 25,
+                  },
+                ]}
+              >
+                <Feather name="search" size={16} color={colors.gold} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search"
+                  placeholderTextColor={colors.inkMuted}
+                  selectionColor={colors.gold}
+                  autoFocus
+                  onBlur={() => {
+                    if (!searchQuery.trim()) setIsSearchOpen(false);
+                  }}
                   style={[
-                    styles.mobileSearchExpander,
-                    {
-                      backgroundColor: colors.bgAlt,
-                      borderColor: colors.gold,
-                      width: mobileSearchWidth,
-                      zIndex: 25,
-                      elevation: 25,
-                    },
+                    styles.mobileSearchInput,
+                    { color: colors.ink, fontFamily: fontFamilies.body },
                   ]}
-                >
-                  <Feather name="search" size={16} color={colors.gold} />
-                  <TextInput
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholder="Search"
-                    placeholderTextColor={colors.inkMuted}
-                    selectionColor={colors.gold}
-                    autoFocus
-                    onBlur={() => {
-                      if (!searchQuery.trim()) setIsSearchOpen(false);
-                    }}
-                    style={[
-                      styles.mobileSearchInput,
-                      { color: colors.ink, fontFamily: fontFamilies.body },
-                    ]}
-                  />
+                />
+              </View>
+            )}
+
+            {!isSearchOpen && (
+              <Pressable
+                style={[
+                  styles.iconBtn,
+                  { backgroundColor: colors.bgAlt },
+                  iconOffset,
+                  { zIndex: 10, elevation: 10 },
+                ]}
+                onPress={() => setIsSearchOpen((prev) => !prev)}
+              >
+                <Feather name="search" size={18} color={colors.gold} />
+              </Pressable>
+            )}
+
+            <Pressable
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.bgAlt },
+                iconOffset,
+              ]}
+            >
+              <View style={{ position: "relative" }}>
+                <Feather name="bell" size={18} color={colors.inkMuted} />
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notificationCount}</Text>
                 </View>
-              )}
+              </View>
+            </Pressable>
 
-              {!isSearchOpen && (
-                <Pressable
-                  style={[
-                    styles.iconBtn,
-                    { backgroundColor: colors.bgAlt },
-                    iconOffset,
-                    { zIndex: 10, elevation: 10 },
-                  ]}
-                  onPress={() => setIsSearchOpen((prev) => !prev)}
-                >
-                  <Feather name="search" size={18} color={colors.gold} />
-                </Pressable>
-              )}
-
+            {/* Profile with dropdown */}
+            <View style={{ position: "relative", zIndex: 20, elevation: 20 }}>
               <Pressable
                 style={[
                   styles.iconBtn,
                   { backgroundColor: colors.bgAlt },
                   iconOffset,
                 ]}
+                onPress={() => setShowProfileDropdown(!showProfileDropdown)}
               >
-                <View style={{ position: "relative" }}>
-                  <Feather name="bell" size={18} color={colors.inkMuted} />
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{notificationCount}</Text>
-                  </View>
-                </View>
+                <Feather name="user" size={18} color={colors.inkMuted} />
               </Pressable>
 
-              {/* Profile with dropdown */}
-              <View style={{ position: "relative", zIndex: 20, elevation: 20 }}>
-                <Pressable
-                  style={[
-                    styles.iconBtn,
-                    { backgroundColor: colors.bgAlt },
-                    iconOffset,
-                  ]}
-                  onPress={() => setShowProfileDropdown(!showProfileDropdown)}
-                >
-                  <Feather name="user" size={18} color={colors.inkMuted} />
-                </Pressable>
-
-                {showProfileDropdown && (
-                  <>
-                    <Pressable
-                      style={StyleSheet.absoluteFill}
-                      pointerEvents="auto"
-                      onPress={() => setShowProfileDropdown(false)}
-                    />
-                    <View
-                      style={[
-                        styles.dropdown,
-                        {
-                          backgroundColor: colors.bg,
-                          borderColor: colors.gold,
-                          shadowColor: colors.shadow,
-                          right: 0,
-                          left: "auto",
-                          zIndex: 50,
-                          elevation: 50,
-                        },
-                      ]}
-                    >
-                      {renderDropdownContent()}
-                    </View>
-                  </>
-                )}
-              </View>
+              {showProfileDropdown && (
+                <>
+                  <Pressable
+                    style={StyleSheet.absoluteFill}
+                    pointerEvents="auto"
+                    onPress={() => setShowProfileDropdown(false)}
+                  />
+                  <View
+                    style={[
+                      styles.dropdown,
+                      {
+                        backgroundColor: colors.bg,
+                        borderColor: colors.gold,
+                        shadowColor: colors.shadow,
+                        right: 0,
+                        left: "auto",
+                        zIndex: 50,
+                        elevation: 50,
+                      },
+                    ]}
+                  >
+                    {renderDropdownContent()}
+                  </View>
+                </>
+              )}
             </View>
           </View>
-
-          {/* Category tabs (sticky below search) */}
-          <CategoryTabs
-            categories={CATEGORIES}
-            selectedIndex={selectedCategory}
-            onSelect={setSelectedCategory}
-          />
         </View>
       )}
 
-      {/* Desktop category tabs */}
-      {isDesktop && (
-        <CategoryTabs
-          categories={CATEGORIES}
-          selectedIndex={selectedCategory}
-          onSelect={setSelectedCategory}
-        />
-      )}
+      {/* Category tabs */}
+      <CategoryTabs
+        categories={CATEGORIES}
+        selectedIndex={selectedCategory}
+        onSelect={setSelectedCategory}
+      />
 
-      {/* Active category page (scrollable with swipe) */}
-      <View style={{ flex: 1, overflow: "hidden" }} {...panResponder.panHandlers}>
+      {/* Active category page */}
+      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
         {renderCategoryPage()}
       </View>
     </View>
@@ -626,8 +614,6 @@ const styles = StyleSheet.create({
   pillsWrapper: {
     borderBottomWidth: 1,
     paddingVertical: spacing(3),
-    zIndex: 10,
-    elevation: 10,
   },
   pillsContent: {
     paddingHorizontal: spacing(3),

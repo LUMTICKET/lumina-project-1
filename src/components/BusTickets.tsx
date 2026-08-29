@@ -123,7 +123,9 @@ function Selector({
       <Pressable
         style={[
           styles.selectorField,
-          { borderColor: colors.border, backgroundColor: colors.bg },
+          {
+            backgroundColor: colors.bgAlt,
+          },
         ]}
         onPress={() => onToggle(pickerType)}
       >
@@ -152,7 +154,7 @@ function Selector({
         <View
           style={[
             styles.optionsList,
-            { backgroundColor: colors.surface, borderColor: colors.border },
+            { backgroundColor: colors.bgAlt, borderColor: colors.border },
           ]}
           // FIX: capture touches so tapping inside the dropdown doesn't
           // bubble up to the list items underneath it.
@@ -368,7 +370,7 @@ export default function BusTickets({ onSelectTicket, onBack }: BusTicketsProps) 
             style={[
               styles.journeyBar,
               {
-                backgroundColor: colors.surface,
+                backgroundColor: colors.bgAlt,
                 borderColor: colors.border,
                 flexDirection: isDesktop ? "row" : "column",
               },

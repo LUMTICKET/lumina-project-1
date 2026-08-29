@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
     PanResponder,
     Platform,
@@ -44,6 +44,22 @@ function CategoryTabs({
   onSelect: (index: number) => void;
 }) {
   const { colors } = useLumTheme();
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Auto-scroll to active category when selected index changes
+  useEffect(() => {
+    if (scrollViewRef.current && selectedIndex !== null) {
+      // Scroll after a brief delay to ensure layout is calculated
+      const timeout = setTimeout(() => {
+        scrollViewRef.current?.scrollToIndex?.({
+          index: selectedIndex,
+          animated: true,
+          viewPosition: 0.5, // Center the active tab
+        } as any);
+      }, 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [selectedIndex]);
 
   return (
     <View
@@ -56,9 +72,12 @@ function CategoryTabs({
       ]}
     >
       <ScrollView
+        ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.pillsContent}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
       >
         {categories.map((cat, index) => {
           const isSelected = index === selectedIndex;
@@ -70,6 +89,7 @@ function CategoryTabs({
                 styles.pill,
                 {
                   backgroundColor: isSelected ? colors.gold : colors.bgAlt,
+                  transform: isSelected ? [{ scale: 1.05 }] : [{ scale: 1 }],
                 },
               ]}
             >
@@ -77,8 +97,9 @@ function CategoryTabs({
                 style={[
                   styles.pillText,
                   {
-                    color: isSelected ? colors.white : colors.ink,
+                    color: isSelected ? colors.black : colors.ink,
                     fontFamily: fontFamilies.bodySemi,
+                    fontWeight: isSelected ? "700" : "600",
                   },
                 ]}
               >

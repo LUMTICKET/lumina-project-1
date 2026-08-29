@@ -1,10 +1,13 @@
+import { AuthProvider } from "@/context/AuthContext";
 import { Slot } from "expo-router";
 import { LumThemeProvider } from "../theme/ThemeContext";
 
 export default function RootLayout() {
   return (
     <LumThemeProvider>
-      <Slot />
+      <AuthProvider>
+        <Slot />
+      </AuthProvider>
     </LumThemeProvider>
   );
 }

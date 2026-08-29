@@ -1,5 +1,17 @@
-import { Feather } from "@expo/vector-icons";
 import {
+  decodeJwtPayload,
+  googleAuth,
+  login,
+  signup,
+  User,
+} from "@/services/auth";
+import { Feather } from "@expo/vector-icons";
+import { makeRedirectUri } from "expo-auth-session";
+import * as Google from "expo-auth-session/providers/google";
+import * as WebBrowser from "expo-web-browser";
+import { useCallback, useEffect, useState } from "react";
+import {
+  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -12,9 +24,10 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { useState } from "react";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
+
+WebBrowser.maybeCompleteAuthSession();
 
 type AuthMode = "login" | "signup";
 
@@ -22,15 +35,17 @@ interface AuthModalProps {
   visible: boolean;
   onClose: () => void;
   initialMode?: AuthMode;
+  onAuthSuccess?: (user: User, token: string) => void;
 }
 
 export default function AuthModal({
   visible,
   onClose,
   initialMode = "signup",
+  onAuthSuccess,
 }: AuthModalProps) {
   const { colors } = useLumTheme();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
   const isSmallPhone = width < 380;
 
@@ -39,17 +54,137 @@ export default function AuthModal({
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const isSignup = mode === "signup";
+
+  const redirectUri = Platform.OS === "web"
+  ? (typeof window !== "undefined" ? window.location.origin + window.location.pathname : "")
+  : makeRedirectUri({ useProxy: false });
+
+console.log("🔴 EXACT Google Redirect URI:", redirectUri);
+
+  /* ── Google OAuth (direct, no proxy) ── */
+  const [request, response, promptAsync] = Google.useAuthRequest(
+    {
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+      androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+      redirectUri: makeRedirectUri({ useProxy: false }),
+      responseType: "id_token",
+      scopes: ["openid", "profile", "email"],
+    },
+    { useProxy: false }
+  );
+
+  useEffect(() => {
+    if (visible) {
+      setError(null);
+      setEmail("");
+      setPassword("");
+      setName("");
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (response?.type === "success" && response.params.id_token) {
+      handleGoogleIdToken(response.params.id_token);
+    } else if (response?.type === "error") {
+      const msg =
+        typeof response.error === "string"
+          ? response.error
+          : (response.error as any)?.description || "Google sign-in failed.";
+      setError(msg);
+    }
+  }, [response]);
 
   const toggleMode = () => {
     setMode(isSignup ? "login" : "signup");
     setEmail("");
     setPassword("");
     setName("");
+    setError(null);
   };
 
-  const cardPadding = isDesktop ? spacing(6) : isSmallPhone ? spacing(4) : spacing(5);
+  const validate = useCallback(() => {
+    if (!email.trim() || !password.trim())
+      return "Email and password are required.";
+    if (isSignup && !name.trim()) return "Please enter your full name.";
+    if (password.length < 6) return "Password must be at least 6 characters.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+      return "Please enter a valid email address.";
+    return null;
+  }, [email, password, name, isSignup]);
+
+  const handleSubmit = async () => {
+    const validationError = validate();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const data = isSignup
+        ? await signup(email, password, name)
+        : await login(email, password);
+
+      onAuthSuccess?.(data.user, data.token);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleIdToken = async (idToken: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const payload = decodeJwtPayload(idToken);
+      if (!payload.email) throw new Error("No email found in Google account.");
+
+      const data = await googleAuth(
+        idToken,
+        payload.email,
+        payload.name || payload.given_name || "",
+        payload.picture || ""
+      );
+      onAuthSuccess?.(data.user, data.token);
+      onClose();
+    } catch (err: any) {
+      setError(err.message || "Google sign-in failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGooglePress = async () => {
+    if (!request) {
+      setError(
+        Platform.OS === "web" && !process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+          ? "Google Web Client ID is missing. Check your .env file."
+          : "Google sign-in is not ready yet. Please wait."
+      );
+      return;
+    }
+    setError(null);
+    try {
+      await promptAsync();
+    } catch {
+      setError("Could not open Google sign-in.");
+    }
+  };
+
+  const cardPadding = isDesktop
+    ? spacing(6)
+    : isSmallPhone
+    ? spacing(4)
+    : spacing(5);
   const wrapperPadding = isDesktop ? spacing(6) : spacing(3);
 
   return (
@@ -95,7 +230,9 @@ export default function AuthModal({
 
                 {/* Logo */}
                 <View style={styles.logoArea}>
-                  <View style={[styles.logoMark, { backgroundColor: colors.gold }]}>
+                  <View
+                    style={[styles.logoMark, { backgroundColor: colors.gold }]}
+                  >
                     <Text style={[styles.logoLetter, { color: colors.black }]}>
                       L
                     </Text>
@@ -103,7 +240,10 @@ export default function AuthModal({
                   <Text
                     style={[
                       styles.logoText,
-                      { color: colors.ink, fontFamily: fontFamilies.display },
+                      {
+                        color: colors.ink,
+                        fontFamily: fontFamilies.display,
+                      },
                     ]}
                   >
                     lumticket
@@ -126,13 +266,47 @@ export default function AuthModal({
                 <Text
                   style={[
                     styles.subheading,
-                    { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                    {
+                      color: colors.inkMuted,
+                      fontFamily: fontFamilies.body,
+                    },
                   ]}
                 >
                   {isSignup
                     ? "Find events, book buses, and track deliveries"
                     : "Log in to continue your journey"}
                 </Text>
+
+                {/* Error banner */}
+                {error && (
+                  <View
+                    style={[
+                      styles.errorBox,
+                      {
+                        backgroundColor: colors.bgAlt,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    <Feather
+                      name="alert-circle"
+                      size={16}
+                      color="#ef4444"
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text
+                      style={[
+                        styles.errorText,
+                        {
+                          color: "#ef4444",
+                          fontFamily: fontFamilies.body,
+                        },
+                      ]}
+                    >
+                      {error}
+                    </Text>
+                  </View>
+                )}
 
                 {/* Google */}
                 <Pressable
@@ -141,17 +315,24 @@ export default function AuthModal({
                     {
                       backgroundColor: colors.bgAlt,
                       borderColor: colors.border,
+                      opacity: !request || loading ? 0.6 : 1,
                     },
                   ]}
+                  onPress={handleGooglePress}
+                  disabled={!request || loading}
                 >
                   <Image
                     source={require("../../assets/images/icons8-google-50.png")}
                     style={styles.googleIcon}
+                    resizeMode="contain"
                   />
                   <Text
                     style={[
                       styles.socialText,
-                      { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                      {
+                        color: colors.ink,
+                        fontFamily: fontFamilies.bodySemi,
+                      },
                     ]}
                   >
                     Continue with Google
@@ -161,18 +342,27 @@ export default function AuthModal({
                 {/* Divider */}
                 <View style={styles.dividerRow}>
                   <View
-                    style={[styles.dividerLine, { backgroundColor: colors.border }]}
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: colors.border },
+                    ]}
                   />
                   <Text
                     style={[
                       styles.dividerText,
-                      { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                      {
+                        color: colors.inkMuted,
+                        fontFamily: fontFamilies.body,
+                      },
                     ]}
                   >
                     or
                   </Text>
                   <View
-                    style={[styles.dividerLine, { backgroundColor: colors.border }]}
+                    style={[
+                      styles.dividerLine,
+                      { backgroundColor: colors.border },
+                    ]}
                   />
                 </View>
 
@@ -193,9 +383,15 @@ export default function AuthModal({
                       placeholderTextColor={colors.inkMuted}
                       value={name}
                       onChangeText={setName}
+                      editable={!loading}
+                      autoComplete="name"
+                      textContentType="name"
                       style={[
                         styles.input,
-                        { color: colors.ink, fontFamily: fontFamilies.body },
+                        {
+                          color: colors.ink,
+                          fontFamily: fontFamilies.body,
+                        },
                       ]}
                     />
                   </View>
@@ -218,9 +414,15 @@ export default function AuthModal({
                     onChangeText={setEmail}
                     autoCapitalize="none"
                     keyboardType="email-address"
+                    editable={!loading}
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     style={[
                       styles.input,
-                      { color: colors.ink, fontFamily: fontFamilies.body },
+                      {
+                        color: colors.ink,
+                        fontFamily: fontFamilies.body,
+                      },
                     ]}
                   />
                 </View>
@@ -241,12 +443,21 @@ export default function AuthModal({
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
+                    editable={!loading}
+                    autoComplete={isSignup ? "new-password" : "password"}
+                    textContentType={isSignup ? "newPassword" : "password"}
                     style={[
                       styles.input,
-                      { color: colors.ink, fontFamily: fontFamilies.body },
+                      {
+                        color: colors.ink,
+                        fontFamily: fontFamilies.body,
+                      },
                     ]}
                   />
-                  <Pressable onPress={() => setShowPassword(!showPassword)}>
+                  <Pressable
+                    onPress={() => setShowPassword(!showPassword)}
+                    disabled={loading}
+                  >
                     <Feather
                       name={showPassword ? "eye-off" : "eye"}
                       size={18}
@@ -259,17 +470,29 @@ export default function AuthModal({
                 <Pressable
                   style={[
                     styles.submitBtn,
-                    { backgroundColor: colors.gold },
+                    {
+                      backgroundColor: colors.gold,
+                      opacity: loading ? 0.7 : 1,
+                    },
                   ]}
+                  onPress={handleSubmit}
+                  disabled={loading}
                 >
-                  <Text
-                    style={[
-                      styles.submitText,
-                      { color: colors.white, fontFamily: fontFamilies.bodySemi },
-                    ]}
-                  >
-                    {isSignup ? "Create account" : "Log in"}
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.submitText,
+                        {
+                          color: colors.white,
+                          fontFamily: fontFamilies.bodySemi,
+                        },
+                      ]}
+                    >
+                      {isSignup ? "Create account" : "Log in"}
+                    </Text>
+                  )}
                 </Pressable>
 
                 {/* Toggle */}
@@ -277,16 +500,24 @@ export default function AuthModal({
                   <Text
                     style={[
                       styles.toggleText,
-                      { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                      {
+                        color: colors.inkMuted,
+                        fontFamily: fontFamilies.body,
+                      },
                     ]}
                   >
-                    {isSignup ? "Already have an account?" : "No account yet?"}
+                    {isSignup
+                      ? "Already have an account?"
+                      : "No account yet?"}
                   </Text>
-                  <Pressable onPress={toggleMode}>
+                  <Pressable onPress={toggleMode} disabled={loading}>
                     <Text
                       style={[
                         styles.toggleLink,
-                        { color: colors.gold, fontFamily: fontFamilies.bodySemi },
+                        {
+                          color: colors.gold,
+                          fontFamily: fontFamilies.bodySemi,
+                        },
                       ]}
                     >
                       {isSignup ? "Log in" : "Sign up"}
@@ -298,10 +529,13 @@ export default function AuthModal({
                 <Text
                   style={[
                     styles.terms,
-                    { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                    {
+                      color: colors.inkMuted,
+                      fontFamily: fontFamilies.body,
+                    },
                   ]}
                 >
-                  By continuing, you agree to LumTicket’s Terms of Service and
+                  By continuing, you agree to LumTicket's Terms of Service and
                   Privacy Policy.
                 </Text>
               </View>
@@ -390,6 +624,19 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: spacing(5),
   },
+  errorBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing(3),
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    marginBottom: spacing(4),
+  },
+  errorText: {
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
+  },
   socialBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -403,7 +650,6 @@ const styles = StyleSheet.create({
   googleIcon: {
     width: 20,
     height: 20,
-    resizeMode: "contain",
   },
   socialText: {
     fontSize: 15,

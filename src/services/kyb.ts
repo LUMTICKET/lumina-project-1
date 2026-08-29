@@ -1,42 +1,91 @@
-import { getToken } from "./auth";
+// /workspaces/lumina-project-1/src/services/kyb.ts
+import { BusinessProfile } from "../components/settings/types";
+import { getMe } from "./auth";
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+// Mock implementation - replace with actual API calls
+const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
 
-async function kybFetch(path: string, options: RequestInit = {}) {
-  const token = await getToken();
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Request failed (${res.status})`);
+export async function getBusinessProfile(): Promise<BusinessProfile | null> {
+  try {
+    // Get current user first
+    const user = await getMe();
+    if (!user) {
+      console.log('No user logged in');
+      return null;
+    }
+
+    // Fetch business profile for the logged-in user
+    const response = await fetch(`${API_BASE}/kyb/profile/${user.id}`);
+    
+    if (response.status === 404) {
+      return null; // No profile exists
+    }
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch business profile');
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching business profile:', error);
+    return null;
   }
-  return res.json();
 }
 
-export async function getMyProfile() {
-  return kybFetch("/api/kyb");
+export async function createProfile(profileData: Omit<BusinessProfile, 'id'>): Promise<BusinessProfile> {
+  try {
+    const user = await getMe();
+    if (!user) {
+      throw new Error('No user logged in');
+    }
+
+    const response = await fetch(`${API_BASE}/kyb/profile`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...profileData,
+        userId: user.id,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create business profile');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error creating business profile:', error);
+    throw error;
+  }
 }
 
-export async function createProfile(profile: any) {
-  return kybFetch("/api/kyb", {
-    method: "POST",
-    body: JSON.stringify(profile),
-  });
-}
+export async function updateProfile(profileId: string, profileData: Partial<BusinessProfile>): Promise<BusinessProfile> {
+  try {
+    const user = await getMe();
+    if (!user) {
+      throw new Error('No user logged in');
+    }
 
-export async function updateProfile(id: number, profile: any) {
-  return kybFetch(`/api/kyb/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(profile),
-  });
-}
+    const response = await fetch(`${API_BASE}/kyb/profile/${profileId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(profileData),
+    });
 
-export async function deleteProfile(id: number) {
-  return kybFetch(`/api/kyb/${id}`, { method: "DELETE" });
+    if (!response.ok) {
+      throw new Error('Failed to update business profile');
+    }
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error updating business profile:', error);
+    throw error;
+  }
 }

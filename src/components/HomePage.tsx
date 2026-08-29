@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useAuth } from "../context/AuthContext";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 
@@ -27,18 +28,6 @@ const CATEGORIES = [
   "Events Tickets",
   "Tourism Tickets",
   "Flight Tickets",
-];
-
-/* ------------------------------------------------------------------ */
-// Dropdown configs
-/* ------------------------------------------------------------------ */
-const DESKTOP_DROPDOWN = [
-  { label: "Create Account", icon: "user-plus" as const },
-];
-
-const MOBILE_DROPDOWN = [
-  { label: "Create Account", icon: "user-plus" as const },
-  { label: "Settings", icon: "settings" as const },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -114,6 +103,8 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
+
+  const { user, logout } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
@@ -195,13 +186,114 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
     }
   };
 
-  const handleDropdownAction = (label: string) => {
+  const handleDropdownAction = async (action: string) => {
     setShowProfileDropdown(false);
-    if (label === "Create Account") onOpenAuth?.();
-    if (label === "Settings") onOpenSettings?.();
+    if (action === "createAccount") onOpenAuth?.();
+    if (action === "settings") onOpenSettings?.();
+    if (action === "logout") await logout();
   };
 
-  const dropdownItems = isDesktop ? DESKTOP_DROPDOWN : MOBILE_DROPDOWN;
+  const renderDropdownContent = () => {
+    if (user) {
+      return (
+        <View style={{ gap: spacing(1) }}>
+          {/* User Info Header */}
+          <View style={[styles.userInfoContainer, { borderBottomColor: colors.border }]}>
+            <Text
+              style={[
+                styles.userNameText,
+                { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+              ]}
+              numberOfLines={1}
+            >
+              {user.name || "User"}
+            </Text>
+            <Text
+              style={[
+                styles.userEmailText,
+                { color: colors.inkMuted, fontFamily: fontFamilies.body },
+              ]}
+              numberOfLines={1}
+            >
+              {user.email}
+            </Text>
+          </View>
+
+          {!isDesktop && (
+            <Pressable
+              onPress={() => handleDropdownAction("settings")}
+              style={styles.dropdownItem}
+            >
+              <Feather name="settings" size={18} color={colors.ink} />
+              <Text
+                style={[
+                  styles.dropdownText,
+                  { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                ]}
+              >
+                Settings
+              </Text>
+            </Pressable>
+          )}
+
+          {/* Logout Button */}
+          <Pressable
+            onPress={() => handleDropdownAction("logout")}
+            style={[
+              styles.dropdownItem,
+              { borderTopWidth: 1, borderTopColor: colors.border },
+            ]}
+          >
+            <Feather name="log-out" size={18} color="#EF4444" />
+            <Text
+              style={[
+                styles.dropdownText,
+                { color: "#EF4444", fontFamily: fontFamilies.bodySemi },
+              ]}
+            >
+              Log Out
+            </Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ gap: spacing(1) }}>
+        <Pressable
+          onPress={() => handleDropdownAction("createAccount")}
+          style={styles.dropdownItem}
+        >
+          <Feather name="user-plus" size={18} color={colors.ink} />
+          <Text
+            style={[
+              styles.dropdownText,
+              { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+            ]}
+          >
+            Create Account / Log In
+          </Text>
+        </Pressable>
+
+        {!isDesktop && (
+          <Pressable
+            onPress={() => handleDropdownAction("settings")}
+            style={styles.dropdownItem}
+          >
+            <Feather name="settings" size={18} color={colors.ink} />
+            <Text
+              style={[
+                styles.dropdownText,
+                { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+              ]}
+            >
+              Settings
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
@@ -284,29 +376,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                         },
                       ]}
                     >
-                      {dropdownItems.map((item, i) => (
-                        <Pressable
-                          key={item.label}
-                          onPress={() => handleDropdownAction(item.label)}
-                          style={[
-                            styles.dropdownItem,
-                            i < dropdownItems.length - 1 && {
-                              borderBottomWidth: 1,
-                              borderBottomColor: colors.border,
-                            },
-                          ]}
-                        >
-                          <Feather name={item.icon} size={18} color={colors.ink} />
-                          <Text
-                            style={[
-                              styles.dropdownText,
-                              { color: colors.ink, fontFamily: fontFamilies.bodySemi },
-                            ]}
-                          >
-                            {item.label}
-                          </Text>
-                        </Pressable>
-                      ))}
+                      {renderDropdownContent()}
                     </View>
                   </>
                 )}
@@ -357,29 +427,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                       },
                     ]}
                   >
-                    {dropdownItems.map((item, i) => (
-                      <Pressable
-                        key={item.label}
-                        onPress={() => handleDropdownAction(item.label)}
-                        style={[
-                          styles.dropdownItem,
-                          i < dropdownItems.length - 1 && {
-                            borderBottomWidth: 1,
-                            borderBottomColor: colors.border,
-                          },
-                        ]}
-                      >
-                        <Feather name={item.icon} size={18} color={colors.ink} />
-                        <Text
-                          style={[
-                            styles.dropdownText,
-                            { color: colors.ink, fontFamily: fontFamilies.bodySemi },
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </Pressable>
-                    ))}
+                    {renderDropdownContent()}
                   </View>
                 </>
               )}
@@ -559,6 +607,19 @@ const styles = StyleSheet.create({
   },
   dropdownText: {
     fontSize: 15,
+  },
+  userInfoContainer: {
+    paddingVertical: spacing(2),
+    paddingHorizontal: spacing(3),
+    borderBottomWidth: 1,
+    marginBottom: spacing(1),
+  },
+  userNameText: {
+    fontSize: 15,
+  },
+  userEmailText: {
+    fontSize: 13,
+    marginTop: 2,
   },
 
   /* ---- Notification Badge ---- */

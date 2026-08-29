@@ -1,6 +1,7 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
+    PanResponder,
     Platform,
     Pressable,
     ScrollView,
@@ -125,6 +126,26 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const [notificationCount] = useState(3);
 
   const iconOffset = Platform.OS !== "web" ? { marginTop: 45 } : {};
+
+  /* ---------- Swipe gesture for categories (MUST be before early returns) ---------- */
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderRelease: (evt, gestureState) => {
+        const { dx } = gestureState;
+        const minDistance = 50;
+
+        if (dx > minDistance && selectedCategory > 0) {
+          // Swipe right: go to previous category
+          setSelectedCategory(selectedCategory - 1);
+        } else if (dx < -minDistance && selectedCategory < CATEGORIES.length - 1) {
+          // Swipe left: go to next category
+          setSelectedCategory(selectedCategory + 1);
+        }
+      },
+    })
+  ).current;
 
   /* ---------- Standalone category (self-contained, no tabs) ---------- */
   if (standaloneCategory !== null) {
@@ -495,7 +516,9 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
       />
 
       {/* Active category page */}
-      <View style={{ flex: 1 }}>{renderCategoryPage()}</View>
+      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
+        {renderCategoryPage()}
+      </View>
     </View>
   );
 }

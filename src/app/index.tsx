@@ -49,7 +49,7 @@ export default function LandingPage() {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            paddingLeft: isDesktop ? 72 : 0,
+            paddingLeft: isDesktop ? 92 : 0,
             paddingBottom: isDesktop ? 0 : 60,
           },
         ]}

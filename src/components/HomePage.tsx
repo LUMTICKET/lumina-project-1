@@ -1,14 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  useWindowDimensions,
-  View,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    useWindowDimensions,
+    View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { useLumTheme } from "../theme/ThemeContext";
@@ -391,12 +391,17 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
         <View
           style={[
             styles.mobileSearchWrap,
-            { paddingHorizontal: spacing(3), paddingTop: spacing(3) },
+            {
+              paddingHorizontal: spacing(3),
+              paddingTop: spacing(3),
+              zIndex: 1,
+              elevation: 1,
+            },
           ]}
         >
           <View style={styles.mobileActionRow}>
             {/* Profile with dropdown */}
-            <View style={{ position: "relative", zIndex: 60 }}>
+            <View style={{ position: "relative", zIndex: 20, elevation: 20 }}>
               <Pressable
                 style={[
                   styles.iconBtn,
@@ -424,6 +429,8 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                         shadowColor: colors.shadow,
                         left: 0,
                         right: "auto",
+                        zIndex: 50,
+                        elevation: 50,
                       },
                     ]}
                   >
@@ -455,11 +462,12 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               {
                 backgroundColor: colors.bgAlt,
                 borderWidth: 1,
-                borderColor: colors.inkMuted,
+                borderColor: colors.gold,
+                zIndex: 2,
               },
             ]}
           >
-            <Feather name="search" size={20} color={colors.inkMuted} />
+            <Feather name="search" size={20} color={colors.gold} />
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -523,6 +531,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing(4),
     gap: 10,
+    zIndex: 2,
+    overflow: "visible",
   },
   desktopSearchInput: {
     flex: 1,
@@ -549,6 +559,9 @@ const styles = StyleSheet.create({
   mobileSearchWrap: {
     paddingBottom: spacing(2),
     gap: spacing(2),
+    zIndex: 1,
+    elevation: 1,
+    overflow: "visible",
   },
   mobileActionRow: {
     flexDirection: "row",
@@ -585,6 +598,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     paddingVertical: spacing(2),
     paddingHorizontal: spacing(2),
+    zIndex: 5000,
+    elevation: 5000,
     ...Platform.select({
       web: {
         boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
@@ -593,7 +608,7 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 20,
         shadowOffset: { width: 0, height: 8 },
-        elevation: 10,
+        elevation: 5000,
       },
     }),
   },

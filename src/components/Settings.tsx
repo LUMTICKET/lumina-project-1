@@ -1,5 +1,5 @@
-import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { Feather } from '@expo/vector-icons';
+import { useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -8,27 +8,31 @@ import {
   Text,
   useWindowDimensions,
   View,
-} from "react-native";
-import { useLumTheme } from "../theme/ThemeContext";
-import { fontFamilies, radii, spacing } from "../theme/tokens";
-import { BusinessProfile } from "./settings/types";
+} from 'react-native';
+import { useLumTheme } from '../theme/ThemeContext';
+import { fontFamilies, radii, spacing } from '../theme/tokens';
 
 // Sub-pages
-import ApprovalWorkflowPage from "./settings/ApprovalWorkflowPage";
-import AuditLogsPage from "./settings/AuditLogsPage";
-import BusinessHoursPage from "./settings/BusinessHoursPage";
-import BusinessProfileForm from "./settings/BusinessProfileForm";
-import BusinessProfilePage from "./settings/BusinessProfilePage";
-import PaymentMethodsPage from "./settings/PaymentMethodsPage";
-import PayoutSchedulePage from "./settings/PayoutSchedulePage";
-import TeamRolesPage from "./settings/TeamRolesPage";
-import VenueDetailsPage from "./settings/VenueDetailsPage";
-import VerifiedDevicesPage from "./settings/VerifiedDevicesPage";
+import ApprovalWorkflowPage from './settings/ApprovalWorkflowPage';
+import AuditLogsPage from './settings/AuditLogsPage';
+import BusinessHoursPage from './settings/BusinessHoursPage';
+import BusinessProfileContainer from './settings/BusinessProfileContainer';
+import PaymentMethodsPage from './settings/PaymentMethodsPage';
+import PayoutSchedulePage from './settings/PayoutSchedulePage';
+import TeamRolesPage from './settings/TeamRolesPage';
+import VenueDetailsPage from './settings/VenueDetailsPage';
+import VerifiedDevicesPage from './settings/VerifiedDevicesPage';
 
 /* ------------------------------------------------------------------ */
 // Toggle
 /* ------------------------------------------------------------------ */
-function Toggle({ value, onValueChange }: { value: boolean; onValueChange: (v: boolean) => void }) {
+function Toggle({
+  value,
+  onValueChange,
+}: {
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+}) {
   const { colors } = useLumTheme();
   return (
     <Pressable
@@ -55,17 +59,16 @@ function Toggle({ value, onValueChange }: { value: boolean; onValueChange: (v: b
 // Settings menu data
 /* ------------------------------------------------------------------ */
 type SettingRoute =
-  | "list"
-  | "business_profile"
-  | "business_profile_form"
-  | "venue_details"
-  | "business_hours"
-  | "verified_devices"
-  | "team_roles"
-  | "approval_workflow"
-  | "audit_logs"
-  | "payment_methods"
-  | "payout_schedule";
+  | 'list'
+  | 'business_profile'
+  | 'venue_details'
+  | 'business_hours'
+  | 'verified_devices'
+  | 'team_roles'
+  | 'approval_workflow'
+  | 'audit_logs'
+  | 'payment_methods'
+  | 'payout_schedule';
 
 type SettingItem = {
   icon: keyof typeof Feather.glyphMap;
@@ -81,28 +84,53 @@ type SettingSection = {
 
 const SECTIONS: SettingSection[] = [
   {
-    title: "Business",
+    title: 'Business',
     items: [
-      { icon: "briefcase", label: "Business profile", route: "business_profile" },
-      { icon: "map-pin", label: "location details", route: "venue_details" },
-      { icon: "clock", label: "Business hours", route: "business_hours" },
+      {
+        icon: 'briefcase',
+        label: 'Business profile',
+        route: 'business_profile',
+      },
+      { icon: 'map-pin', label: 'location details', route: 'venue_details' },
+      { icon: 'clock', label: 'Business hours', route: 'business_hours' },
     ],
   },
   {
-    title: "Access",
+    title: 'Access',
     items: [
-      { icon: "shield", label: "Operator access", route: "approval_workflow", hasToggle: true },
-      { icon: "smartphone", label: "Verified devices", route: "verified_devices" },
-      { icon: "users", label: "Team roles", route: "team_roles" },
-      { icon: "check-circle", label: "Approval workflow", route: "approval_workflow" },
-      { icon: "file-text", label: "Audit logs", route: "audit_logs" },
+      {
+        icon: 'shield',
+        label: 'Operator access',
+        route: 'approval_workflow',
+        hasToggle: true,
+      },
+      {
+        icon: 'smartphone',
+        label: 'Verified devices',
+        route: 'verified_devices',
+      },
+      { icon: 'users', label: 'Team roles', route: 'team_roles' },
+      {
+        icon: 'check-circle',
+        label: 'Approval workflow',
+        route: 'approval_workflow',
+      },
+      { icon: 'file-text', label: 'Audit logs', route: 'audit_logs' },
     ],
   },
   {
-    title: "Billing & payouts",
+    title: 'Billing & payouts',
     items: [
-      { icon: "credit-card", label: "Accepted payment methods", route: "payment_methods" },
-      { icon: "dollar-sign", label: "Payout schedule", route: "payout_schedule" },
+      {
+        icon: 'credit-card',
+        label: 'Accepted payment methods',
+        route: 'payment_methods',
+      },
+      {
+        icon: 'dollar-sign',
+        label: 'Payout schedule',
+        route: 'payout_schedule',
+      },
     ],
   },
 ];
@@ -115,42 +143,30 @@ export default function Settings() {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
 
-  const [route, setRoute] = useState<SettingRoute>("list");
+  const [route, setRoute] = useState<SettingRoute>('list');
   const [faceId, setFaceId] = useState(true);
-  const [profile, setProfile] = useState<BusinessProfile | null>(null);
 
   /* ---- Sub-page renders ---- */
-  if (route === "business_profile") {
-    return (
-      <BusinessProfilePage
-        profile={profile}
-        onBack={() => setRoute("list")}
-        onEdit={() => setRoute("business_profile_form")}
-      />
-    );
+  if (route === 'business_profile') {
+    return <BusinessProfileContainer onBack={() => setRoute('list')} />;
   }
 
-  if (route === "business_profile_form") {
-    return (
-      <BusinessProfileForm
-        existing={profile}
-        onBack={() => setRoute(profile ? "business_profile" : "list")}
-        onSave={(p) => {
-          setProfile(p);
-          setRoute("business_profile");
-        }}
-      />
-    );
-  }
-
-  if (route === "venue_details") return <VenueDetailsPage onBack={() => setRoute("list")} />;
-  if (route === "business_hours") return <BusinessHoursPage onBack={() => setRoute("list")} />;
-  if (route === "verified_devices") return <VerifiedDevicesPage onBack={() => setRoute("list")} />;
-  if (route === "team_roles") return <TeamRolesPage onBack={() => setRoute("list")} />;
-  if (route === "approval_workflow") return <ApprovalWorkflowPage onBack={() => setRoute("list")} />;
-  if (route === "audit_logs") return <AuditLogsPage onBack={() => setRoute("list")} />;
-  if (route === "payment_methods") return <PaymentMethodsPage onBack={() => setRoute("list")} />;
-  if (route === "payout_schedule") return <PayoutSchedulePage onBack={() => setRoute("list")} />;
+  if (route === 'venue_details')
+    return <VenueDetailsPage onBack={() => setRoute('list')} />;
+  if (route === 'business_hours')
+    return <BusinessHoursPage onBack={() => setRoute('list')} />;
+  if (route === 'verified_devices')
+    return <VerifiedDevicesPage onBack={() => setRoute('list')} />;
+  if (route === 'team_roles')
+    return <TeamRolesPage onBack={() => setRoute('list')} />;
+  if (route === 'approval_workflow')
+    return <ApprovalWorkflowPage onBack={() => setRoute('list')} />;
+  if (route === 'audit_logs')
+    return <AuditLogsPage onBack={() => setRoute('list')} />;
+  if (route === 'payment_methods')
+    return <PaymentMethodsPage onBack={() => setRoute('list')} />;
+  if (route === 'payout_schedule')
+    return <PayoutSchedulePage onBack={() => setRoute('list')} />;
 
   /* ---- List view ---- */
   return (
@@ -183,7 +199,7 @@ export default function Settings() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[{ maxWidth: 640, alignSelf: "center", width: "100%" }]}>
+        <View style={[{ maxWidth: 640, alignSelf: 'center', width: '100%' }]}>
           {SECTIONS.map((section) => (
             <View key={section.title} style={styles.section}>
               <Text
@@ -231,7 +247,10 @@ export default function Settings() {
                         <Text
                           style={[
                             styles.rowLabel,
-                            { color: colors.ink, fontFamily: fontFamilies.body },
+                            {
+                              color: colors.ink,
+                              fontFamily: fontFamilies.body,
+                            },
                           ]}
                         >
                           {item.label}
@@ -290,20 +309,20 @@ export default function Settings() {
 }
 
 const styles = StyleSheet.create({
-  wrap: { flex: 1, width: "100%" },
+  wrap: { flex: 1, width: '100%' },
   header: {
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
-    marginTop: Platform.OS === "web" ? 0 : 30,
+    marginTop: Platform.OS === 'web' ? 0 : 30,
   },
-  headerTitle: { fontSize: 20, fontWeight: "700" },
+  headerTitle: { fontSize: 20, fontWeight: '700' },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   section: { marginBottom: spacing(5) },
   sectionTitle: {
     fontSize: 13,
-    textTransform: "uppercase",
+    textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: spacing(2.5),
     marginLeft: spacing(1),
@@ -315,23 +334,23 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 4 },
     elevation: 2,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing(4),
     paddingVertical: spacing(3.5),
   },
-  rowLeft: { flexDirection: "row", alignItems: "center" },
+  rowLeft: { flexDirection: 'row', alignItems: 'center' },
   rowLabel: { fontSize: 15 },
   toggleTrack: {
     width: 48,
     height: 28,
     borderRadius: 14,
     padding: 2,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   toggleThumb: {
     width: 24,
@@ -343,8 +362,8 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   logoutCard: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing(3),
     borderRadius: radii.xl,
     borderWidth: 1,
@@ -357,5 +376,5 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   logoutText: { fontSize: 15 },
-  version: { fontSize: 12, textAlign: "center" },
+  version: { fontSize: 12, textAlign: 'center' },
 });

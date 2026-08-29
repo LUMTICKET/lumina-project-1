@@ -152,10 +152,14 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        const { dx, dy } = gestureState;
+        // Allow swipe if horizontal movement is greater than vertical
+        return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10;
+      },
       onPanResponderRelease: (evt, gestureState) => {
         const { dx } = gestureState;
-        const minDistance = 50;
+        const minDistance = 30;
 
         if (dx > minDistance && selectedCategory > 0) {
           // Swipe right: go to previous category

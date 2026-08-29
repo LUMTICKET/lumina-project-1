@@ -103,11 +103,13 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
+  const mobileSearchWidth = Math.min(220, Math.max(140, width * 0.52));
 
   const { user, logout } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   /** Full-screen ticket purchase flow (config → payment) — hides tabs/search */
   const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
@@ -219,22 +221,20 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
             </Text>
           </View>
 
-          {!isDesktop && (
-            <Pressable
-              onPress={() => handleDropdownAction("settings")}
-              style={styles.dropdownItem}
+          <Pressable
+            onPress={() => handleDropdownAction("settings")}
+            style={styles.dropdownItem}
+          >
+            <Feather name="settings" size={18} color={colors.ink} />
+            <Text
+              style={[
+                styles.dropdownText,
+                { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+              ]}
             >
-              <Feather name="settings" size={18} color={colors.ink} />
-              <Text
-                style={[
-                  styles.dropdownText,
-                  { color: colors.ink, fontFamily: fontFamilies.bodySemi },
-                ]}
-              >
-                Settings
-              </Text>
-            </Pressable>
-          )}
+              Settings
+            </Text>
+          </Pressable>
 
           {/* Logout Button */}
           <Pressable
@@ -271,26 +271,9 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               { color: colors.ink, fontFamily: fontFamilies.bodySemi },
             ]}
           >
-            Create Account / Log In
+            Create Account
           </Text>
         </Pressable>
-
-        {!isDesktop && (
-          <Pressable
-            onPress={() => handleDropdownAction("settings")}
-            style={styles.dropdownItem}
-          >
-            <Feather name="settings" size={18} color={colors.ink} />
-            <Text
-              style={[
-                styles.dropdownText,
-                { color: colors.ink, fontFamily: fontFamilies.bodySemi },
-              ]}
-            >
-              Settings
-            </Text>
-          </Pressable>
-        )}
       </View>
     );
   };
@@ -400,6 +383,67 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
           ]}
         >
           <View style={styles.mobileActionRow}>
+            {isSearchOpen && (
+              <View
+                style={[
+                  styles.mobileSearchExpander,
+                  {
+                    backgroundColor: colors.bgAlt,
+                    borderColor: colors.gold,
+                    width: mobileSearchWidth,
+                    zIndex: 25,
+                    elevation: 25,
+                  },
+                ]}
+              >
+                <Feather name="search" size={16} color={colors.gold} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search"
+                  placeholderTextColor={colors.inkMuted}
+                  selectionColor={colors.gold}
+                  autoFocus
+                  onBlur={() => {
+                    if (!searchQuery.trim()) setIsSearchOpen(false);
+                  }}
+                  style={[
+                    styles.mobileSearchInput,
+                    { color: colors.ink, fontFamily: fontFamilies.body },
+                  ]}
+                />
+              </View>
+            )}
+
+            {!isSearchOpen && (
+              <Pressable
+                style={[
+                  styles.iconBtn,
+                  { backgroundColor: colors.bgAlt },
+                  iconOffset,
+                  { zIndex: 10, elevation: 10 },
+                ]}
+                onPress={() => setIsSearchOpen((prev) => !prev)}
+              >
+                <Feather name="search" size={18} color={colors.gold} />
+              </Pressable>
+            )}
+
+            <Pressable
+              style={[
+                styles.iconBtn,
+                { backgroundColor: colors.bgAlt },
+                iconOffset,
+              ]}
+            >
+              <View style={{ position: "relative" }}>
+                <Feather name="bell" size={18} color={colors.inkMuted} />
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notificationCount}</Text>
+                </View>
+              </View>
+            </Pressable>
+
             {/* Profile with dropdown */}
             <View style={{ position: "relative", zIndex: 20, elevation: 20 }}>
               <Pressable
@@ -424,11 +468,11 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                     style={[
                       styles.dropdown,
                       {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
+                        backgroundColor: colors.bg,
+                        borderColor: colors.gold,
                         shadowColor: colors.shadow,
-                        left: 0,
-                        right: "auto",
+                        right: 0,
+                        left: "auto",
                         zIndex: 50,
                         elevation: 50,
                       },
@@ -439,46 +483,6 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                 </>
               )}
             </View>
-
-            {/* Notification bell */}
-            <Pressable
-              style={[
-                styles.iconBtn,
-                { backgroundColor: colors.bgAlt },
-                iconOffset,
-              ]}
-            >
-              <View style={{ position: "relative" }}>
-                <Feather name="bell" size={18} color={colors.inkMuted} />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{notificationCount}</Text>
-                </View>
-              </View>
-            </Pressable>
-          </View>
-          <View
-            style={[
-              styles.mobileSearchBar,
-              {
-                backgroundColor: colors.bgAlt,
-                borderWidth: 1,
-                borderColor: colors.gold,
-                zIndex: 2,
-              },
-            ]}
-          >
-            <Feather name="search" size={20} color={colors.gold} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search"
-              placeholderTextColor={colors.inkMuted}
-              selectionColor={colors.gold}
-              style={[
-                styles.mobileSearchInput,
-                { color: colors.ink, fontFamily: fontFamilies.body },
-              ]}
-            />
           </View>
         </View>
       )}
@@ -543,6 +547,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     paddingVertical: 0,
+    minWidth: 0,
   },
   iconBtn: {
     width: 48,
@@ -566,8 +571,22 @@ const styles = StyleSheet.create({
   mobileActionRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     gap: spacing(2),
+    overflow: "visible",
+  },
+  mobileSearchExpander: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 42,
+    minWidth: 140,
+    maxWidth: "72%",
+    borderRadius: radii.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing(3),
+    gap: spacing(2),
+    marginRight: spacing(1),
+    overflow: "visible",
   },
   pillsWrapper: {
     borderBottomWidth: 1,
@@ -593,7 +612,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 54,
     right: 0,
-    minWidth: 220,
+    minWidth: 180,
     borderRadius: radii.xl,
     borderWidth: 1,
     paddingVertical: spacing(2),
@@ -602,12 +621,12 @@ const styles = StyleSheet.create({
     elevation: 5000,
     ...Platform.select({
       web: {
-        boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+        boxShadow: "0 12px 28px rgba(11,31,58,0.28)",
       },
       default: {
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.22,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 12 },
         elevation: 5000,
       },
     }),

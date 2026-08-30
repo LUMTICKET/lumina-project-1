@@ -163,7 +163,9 @@ can address rejection notes and resubmit; administrators review event
 submissions and reported posts from the Create route. Organizer sessions use
 secure device storage on native platforms and guarded browser storage on web.
 Courier results and a privacy-safe parcel timeline are available through
-Search. Bus, flight, and tourism remain staged for backend integration.
+Search. Organizers can open courier operations from Create to register
+services and parcels and append valid tracking updates. Bus, flight, and
+tourism remain staged for backend integration.
 
 
 2. Create a feature branch.

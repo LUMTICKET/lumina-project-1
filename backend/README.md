@@ -91,6 +91,8 @@ reported post removes it from public feed, detail, and search responses.
 
 Organizer-owned courier workflow endpoints are:
 
+- GET `/api/v1/organizer/courier-listings` to list all owned services,
+  including inactive listings
 - POST `/api/v1/courier-listings` to publish a courier service
 - PATCH `/api/v1/courier-listings/:listingId` to edit or deactivate an
   owned listing

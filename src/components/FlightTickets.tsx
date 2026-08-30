@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { useMemo, useState } from "react";
 import {
   Image,
   Platform,
@@ -62,6 +63,111 @@ const ITEMS: TicketConfig[] = [
   },
 ];
 
+interface SelectorProps {
+  label: string;
+  value: string;
+  placeholder: string;
+  pickerType: string;
+  options: string[];
+  colors: any;
+  active: boolean;
+  onToggle: (type: string) => void;
+  onSelect: (value: string) => void;
+  formatOption?: (opt: string) => string;
+}
+
+function Selector({
+  label,
+  value,
+  placeholder,
+  pickerType,
+  options,
+  colors,
+  active,
+  onToggle,
+  onSelect,
+  formatOption,
+}: SelectorProps) {
+  return (
+    <View
+      style={{
+        flex: 1,
+        minWidth: 140,
+        position: "relative",
+        zIndex: active ? 50 : 1,
+        elevation: active ? 12 : 1,
+      }}
+    >
+      <Pressable
+        style={[
+          styles.selectorField,
+          {
+            backgroundColor: colors.bgAlt,
+          },
+        ]}
+        onPress={() => onToggle(pickerType)}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.selectorLabel, { color: colors.inkMuted }]}>
+            {label}
+          </Text>
+          <Text
+            style={[
+              styles.selectorValue,
+              { color: value ? colors.ink : colors.inkMuted },
+            ]}
+            numberOfLines={1}
+          >
+            {value ? (formatOption ? formatOption(value) : value) : placeholder}
+          </Text>
+        </View>
+        <Feather
+          name={active ? "chevron-up" : "chevron-down"}
+          size={16}
+          color={colors.inkMuted}
+        />
+      </Pressable>
+
+      {active && (
+        <View
+          style={[
+            styles.optionsList,
+            { backgroundColor: colors.bgAlt, borderColor: colors.border },
+          ]}
+          onStartShouldSetResponder={() => true}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
+          <Pressable
+            style={styles.optionItem}
+            onPress={() => {
+              onSelect("");
+              onToggle(pickerType);
+            }}
+          >
+            <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body }}>
+              Any
+            </Text>
+          </Pressable>
+          {options.map((opt) => (
+            <Pressable
+              key={opt}
+              style={styles.optionItem}
+              onPress={() => {
+                onSelect(opt);
+                onToggle(pickerType);
+              }}
+            >
+              <Text style={{ color: colors.ink, fontFamily: fontFamilies.body }}>
+                {formatOption ? formatOption(opt) : opt}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 interface FlightTicketsProps {
   onSelectTicket?: (ticket: TicketConfig) => void;
   onBack?: () => void;
@@ -72,13 +178,52 @@ export default function FlightTickets({ onSelectTicket, onBack }: FlightTicketsP
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
 
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [journeyDate, setJourneyDate] = useState("");
+  const [activePickerType, setActivePickerType] = useState<string | null>(null);
+
+  const filteredItems = useMemo(() => {
+    return ITEMS.filter((item) => {
+      if (from && item.route?.from !== from) return false;
+      if (to && item.route?.to !== to) return false;
+      if (journeyDate && item.date) {
+        const d = item.date.split("T")[0];
+        if (d !== journeyDate) return false;
+      }
+      return true;
+    });
+  }, [from, to, journeyDate]);
+
+  const fromOptions = useMemo(
+    () => [...new Set(ITEMS.map((i) => i.route?.from).filter(Boolean))] as string[],
+    []
+  );
+  const toOptions = useMemo(
+    () => [...new Set(ITEMS.map((i) => i.route?.to).filter(Boolean))] as string[],
+    []
+  );
+  const dateOptions = useMemo(
+    () => [...new Set(ITEMS.map((i) => i.date?.split("T")[0]).filter(Boolean))] as string[],
+    []
+  );
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   let columnCount = 2;
   if (width >= 1400) columnCount = 6;
   else if (width >= 1100) columnCount = 5;
   else if (width >= 768) columnCount = 3;
 
-  const columns: (typeof ITEMS)[] = Array.from({ length: columnCount }, () => []);
-  ITEMS.forEach((item, i) => columns[i % columnCount].push(item));
+  const columns: Array<typeof filteredItems> = Array.from({ length: columnCount }, () => []);
+  filteredItems.forEach((item, i) => columns[i % columnCount].push(item));
 
   const showHeader = !!onBack;
 
@@ -118,6 +263,64 @@ export default function FlightTickets({ onSelectTicket, onBack }: FlightTicketsP
         }}
         showsVerticalScrollIndicator={false}
       >
+        {/* Journey Planner */}
+        <View
+          style={{
+            maxWidth: 1600,
+            alignSelf: "center",
+            width: "100%",
+            marginBottom: spacing(4),
+            zIndex: 10,
+            position: "relative",
+          }}
+        >
+          <View
+            style={[
+              styles.journeyBar,
+              {
+                backgroundColor: colors.bgAlt,
+                borderColor: colors.border,
+                flexDirection: isDesktop ? "row" : "column",
+              },
+            ]}
+          >
+            <Selector
+              label="From"
+              value={from}
+              placeholder="Select origin"
+              pickerType="from"
+              options={fromOptions}
+              colors={colors}
+              active={activePickerType === "from"}
+              onToggle={(type) => setActivePickerType(activePickerType === type ? null : type)}
+              onSelect={setFrom}
+            />
+            <Selector
+              label="To"
+              value={to}
+              placeholder="Select destination"
+              pickerType="to"
+              options={toOptions}
+              colors={colors}
+              active={activePickerType === "to"}
+              onToggle={(type) => setActivePickerType(activePickerType === type ? null : type)}
+              onSelect={setTo}
+            />
+            <Selector
+              label="Date"
+              value={journeyDate}
+              placeholder="Select date"
+              pickerType="date"
+              options={dateOptions}
+              colors={colors}
+              active={activePickerType === "date"}
+              onToggle={(type) => setActivePickerType(activePickerType === type ? null : type)}
+              onSelect={setJourneyDate}
+              formatOption={formatDate}
+            />
+          </View>
+        </View>
+
         <View style={styles.board}>
           {columns.map((col, ci) => (
             <View key={ci} style={styles.column}>
@@ -181,6 +384,50 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.display,
   },
 
+  /* Journey bar */
+  journeyBar: {
+    borderRadius: radii.xl,
+    borderWidth: 1,
+  },
+  selectorField: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2.5),
+  },
+  selectorLabel: {
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+    fontFamily: fontFamilies.body,
+  },
+  selectorValue: {
+    fontSize: 14,
+    fontFamily: fontFamilies.bodySemi,
+  },
+  optionsList: {
+    position: "absolute",
+    top: "100%",
+    left: spacing(1),
+    right: spacing(1),
+    zIndex: 100,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    marginTop: 4,
+    paddingVertical: spacing(1),
+    maxHeight: 220,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+  },
+  optionItem: {
+    paddingHorizontal: spacing(3),
+    paddingVertical: spacing(2.5),
+  },
+
+  /* Masonry */
   board: { flexDirection: "row", gap: spacing(3), alignItems: "flex-start", maxWidth: 1600, alignSelf: "center", width: "100%" },
   column: { flex: 1, gap: spacing(3) },
   pinWrap: { width: "100%", marginBottom: spacing(3) },

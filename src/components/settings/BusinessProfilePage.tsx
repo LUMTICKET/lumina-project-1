@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather } from '@expo/vector-icons';
 import {
   Platform,
   Pressable,
@@ -7,10 +7,10 @@ import {
   Text,
   useWindowDimensions,
   View,
-} from "react-native";
-import { useLumTheme } from "../../theme/ThemeContext";
-import { fontFamilies, radii, spacing } from "../../theme/tokens";
-import { BusinessProfile } from "./types";
+} from 'react-native';
+import { useLumTheme } from '../../theme/ThemeContext';
+import { fontFamilies, radii, spacing } from '../../theme/tokens';
+import { BusinessProfile } from './types';
 
 interface Props {
   profile: BusinessProfile | null;
@@ -19,26 +19,30 @@ interface Props {
 }
 
 const DOC_LABELS: Record<string, string> = {
-  registration_certificate: "Registration Certificate",
-  tax_clearance: "Tax Clearance",
-  business_license: "Business License",
-  national_id: "National ID",
-  other: "Other Document",
+  registration_certificate: 'Registration Certificate',
+  tax_clearance: 'Tax Clearance',
+  business_license: 'Business License',
+  national_id: 'National ID',
+  other: 'Other Document',
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "#D97706",
-  verified: "#059669",
-  rejected: "#DC2626",
+  pending: '#D97706',
+  verified: '#059669',
+  rejected: '#DC2626',
 };
 
 const STATUS_BG: Record<string, string> = {
-  pending: "rgba(217, 119, 6, 0.12)",
-  verified: "rgba(5, 150, 105, 0.12)",
-  rejected: "rgba(220, 38, 38, 0.12)",
+  pending: 'rgba(217, 119, 6, 0.12)',
+  verified: 'rgba(5, 150, 105, 0.12)',
+  rejected: 'rgba(220, 38, 38, 0.12)',
 };
 
-export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) {
+export default function BusinessProfilePage({
+  profile,
+  onBack,
+  onEdit,
+}: Props) {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
@@ -47,23 +51,55 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
   if (!profile) {
     return (
       <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-        <SettingsHeader title="Business Profile" onBack={onBack} colors={colors} />
+        <SettingsHeader
+          title="Business Profile"
+          onBack={onBack}
+          colors={colors}
+        />
         <View style={styles.emptyWrap}>
-          <View style={[styles.emptyIconCircle, { backgroundColor: colors.surfaceAlt }]}>
+          <View
+            style={[
+              styles.emptyIconCircle,
+              { backgroundColor: colors.surfaceAlt },
+            ]}
+          >
             <Feather name="briefcase" size={32} color={colors.inkMuted} />
           </View>
-          <Text style={[styles.emptyTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+          <Text
+            style={[
+              styles.emptyTitle,
+              { color: colors.ink, fontFamily: fontFamilies.display },
+            ]}
+          >
             No Business Profile
           </Text>
-          <Text style={[styles.emptyDesc, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+          <Text
+            style={[
+              styles.emptyDesc,
+              { color: colors.inkMuted, fontFamily: fontFamilies.body },
+            ]}
+          >
             Create a profile to start publishing tickets and receiving payouts.
           </Text>
           <Pressable
             onPress={onEdit}
-            style={[styles.actionBtn, { backgroundColor: colors.gold, marginTop: spacing(5) }]}
+            style={[
+              styles.actionBtn,
+              { backgroundColor: colors.gold, marginTop: spacing(5) },
+            ]}
           >
-            <Feather name="plus" size={18} color={colors.black} style={{ marginRight: spacing(2) }} />
-            <Text style={[styles.actionBtnText, { color: colors.black, fontFamily: fontFamilies.bodySemi }]}>
+            <Feather
+              name="plus"
+              size={18}
+              color={colors.black}
+              style={{ marginRight: spacing(2) }}
+            />
+            <Text
+              style={[
+                styles.actionBtnText,
+                { color: colors.black, fontFamily: fontFamilies.bodySemi },
+              ]}
+            >
               Create Profile
             </Text>
           </Pressable>
@@ -74,7 +110,11 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-      <SettingsHeader title="Business Profile" onBack={onBack} colors={colors} />
+      <SettingsHeader
+        title="Business Profile"
+        onBack={onBack}
+        colors={colors}
+      />
 
       <ScrollView
         contentContainerStyle={[
@@ -86,13 +126,23 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
           },
         ]}
       >
-        <View style={[{ maxWidth: 720, alignSelf: "center", width: "100%" }]}>
+        <View style={[{ maxWidth: 720, alignSelf: 'center', width: '100%' }]}>
           {/* Profile Header Card */}
           <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <View style={[styles.profileHeader, isTablet && styles.profileHeaderRow]}>
+            <View
+              style={[
+                styles.profileHeader,
+                isTablet && styles.profileHeaderRow,
+              ]}
+            >
               <View style={[styles.avatar, { backgroundColor: colors.gold }]}>
-                <Text style={[styles.avatarLetter, { color: colors.black, fontFamily: fontFamilies.display }]}>
-                  {profile.businessName.charAt(0).toUpperCase()}
+                <Text
+                  style={[
+                    styles.avatarLetter,
+                    { color: colors.black, fontFamily: fontFamilies.display },
+                  ]}
+                >
+                  {profile.businessName?.charAt(0).toUpperCase() || '?'}
                 </Text>
               </View>
 
@@ -122,16 +172,19 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
                   <View
                     style={[
                       styles.badge,
-                      { backgroundColor: colors.gold + "20" },
+                      { backgroundColor: colors.gold + '20' },
                     ]}
                   >
                     <Text
                       style={[
                         styles.badgeText,
-                        { color: colors.gold, fontFamily: fontFamilies.bodySemi },
+                        {
+                          color: colors.gold,
+                          fontFamily: fontFamilies.bodySemi,
+                        },
                       ]}
                     >
-                      {profile.type === "individual" ? "Individual" : "Company"}
+                      {profile.type === 'individual' ? 'Individual' : 'Company'}
                     </Text>
                   </View>
 
@@ -151,7 +204,10 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
                       <Text
                         style={[
                           styles.badgeText,
-                          { color: STATUS_COLORS.verified, fontFamily: fontFamilies.bodySemi },
+                          {
+                            color: STATUS_COLORS.verified,
+                            fontFamily: fontFamilies.bodySemi,
+                          },
                         ]}
                       >
                         Verified
@@ -167,7 +223,10 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
                       <Text
                         style={[
                           styles.badgeText,
-                          { color: STATUS_COLORS.pending, fontFamily: fontFamilies.bodySemi },
+                          {
+                            color: STATUS_COLORS.pending,
+                            fontFamily: fontFamilies.bodySemi,
+                          },
                         ]}
                       >
                         Pending
@@ -241,7 +300,10 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
                 <Text
                   style={[
                     styles.descLabel,
-                    { color: colors.inkMuted, fontFamily: fontFamilies.bodySemi },
+                    {
+                      color: colors.inkMuted,
+                      fontFamily: fontFamilies.bodySemi,
+                    },
                   ]}
                 >
                   About
@@ -262,28 +324,31 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
           <Text
             style={[
               styles.sectionLabel,
-              { color: colors.ink, fontFamily: fontFamilies.bodySemi, marginTop: spacing(6) },
+              {
+                color: colors.ink,
+                fontFamily: fontFamilies.bodySemi,
+                marginTop: spacing(6),
+              },
             ]}
           >
-            {profile.type === "individual" ? "Owner Details" : "Executive Team"}
+            {profile.type === 'individual' ? 'Owner Details' : 'Executive Team'}
           </Text>
-          <View style={[styles.card, { backgroundColor: colors.surface, gap: 0 }]}>
-            {profile.executives.map((exec, i) => (
+          <View
+            style={[styles.card, { backgroundColor: colors.surface, gap: 0 }]}
+          >
+            {(profile.executives || []).map((exec, i) => (
               <View
                 key={exec.id}
                 style={[
                   styles.execRow,
-                  i < profile.executives.length - 1 && {
+                  i < (profile.executives || []).length - 1 && {
                     borderBottomWidth: 1,
                     borderBottomColor: colors.border,
                   },
                 ]}
               >
                 <View
-                  style={[
-                    styles.execAvatar,
-                    { backgroundColor: colors.bgAlt },
-                  ]}
+                  style={[styles.execAvatar, { backgroundColor: colors.bgAlt }]}
                 >
                   <Text
                     style={[
@@ -291,7 +356,7 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
                       { color: colors.ink, fontFamily: fontFamilies.bodySemi },
                     ]}
                   >
-                    {exec.fullName.charAt(0).toUpperCase() || "?"}
+                    {exec.fullName?.charAt(0).toUpperCase() || '?'}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
@@ -310,7 +375,7 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
                     ]}
                   >
                     {exec.role}
-                    {exec.nationalIdNumber ? ` · ${exec.nationalIdNumber}` : ""}
+                    {exec.nationalIdNumber ? ` · ${exec.nationalIdNumber}` : ''}
                   </Text>
                 </View>
                 <View
@@ -322,7 +387,10 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
                   <Text
                     style={[
                       styles.idBadgeText,
-                      { color: STATUS_COLORS.verified, fontFamily: fontFamilies.bodySemi },
+                      {
+                        color: STATUS_COLORS.verified,
+                        fontFamily: fontFamilies.bodySemi,
+                      },
                     ]}
                   >
                     ID
@@ -336,32 +404,45 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
           <Text
             style={[
               styles.sectionLabel,
-              { color: colors.ink, fontFamily: fontFamilies.bodySemi, marginTop: spacing(6) },
+              {
+                color: colors.ink,
+                fontFamily: fontFamilies.bodySemi,
+                marginTop: spacing(6),
+              },
             ]}
           >
             Documents & Registrations
           </Text>
-          <View style={[styles.card, { backgroundColor: colors.surface, gap: 0 }]}>
-            {profile.documents.length > 0 ? (
-              profile.documents.map((doc, i) => (
+          <View
+            style={[styles.card, { backgroundColor: colors.surface, gap: 0 }]}
+          >
+            {(profile.documents || []).length > 0 ? (
+              (profile.documents || []).map((doc, i) => (
                 <View
                   key={doc.id}
                   style={[
                     styles.docRow,
-                    i < profile.documents.length - 1 && {
+                    i < (profile.documents || []).length - 1 && {
                       borderBottomWidth: 1,
                       borderBottomColor: colors.border,
                     },
                   ]}
                 >
                   <View style={styles.docIconWrap}>
-                    <Feather name="file-text" size={20} color={colors.inkMuted} />
+                    <Feather
+                      name="file-text"
+                      size={20}
+                      color={colors.inkMuted}
+                    />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text
                       style={[
                         styles.docTitle,
-                        { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+                        {
+                          color: colors.ink,
+                          fontFamily: fontFamilies.bodySemi,
+                        },
                       ]}
                     >
                       {doc.title}
@@ -369,24 +450,31 @@ export default function BusinessProfilePage({ profile, onBack, onEdit }: Props) 
                     <Text
                       style={[
                         styles.docSub,
-                        { color: colors.inkMuted, fontFamily: fontFamilies.body },
+                        {
+                          color: colors.inkMuted,
+                          fontFamily: fontFamilies.body,
+                        },
                       ]}
                     >
-                      {DOC_LABELS[doc.type]} ·{" "}
+                      {DOC_LABELS[doc.type]} ·{' '}
                       {new Date(doc.uploadedAt).toLocaleDateString()}
                     </Text>
                   </View>
                   <View
                     style={[
                       styles.statusBadge,
-                      { backgroundColor: STATUS_BG[doc.status] || STATUS_BG.pending },
+                      {
+                        backgroundColor:
+                          STATUS_BG[doc.status] || STATUS_BG.pending,
+                      },
                     ]}
                   >
                     <Text
                       style={[
                         styles.statusBadgeText,
                         {
-                          color: STATUS_COLORS[doc.status] || STATUS_COLORS.pending,
+                          color:
+                            STATUS_COLORS[doc.status] || STATUS_COLORS.pending,
                           fontFamily: fontFamilies.bodySemi,
                         },
                       ]}
@@ -489,12 +577,7 @@ function InfoItem({
 }) {
   return (
     <View style={styles.infoItem}>
-      <View
-        style={[
-          styles.infoIconWrap,
-          { backgroundColor: colors.bgAlt },
-        ]}
-      >
+      <View style={[styles.infoIconWrap, { backgroundColor: colors.bgAlt }]}>
         <Feather name={icon} size={16} color={colors.inkMuted} />
       </View>
       <View style={{ flex: 1 }}>
@@ -525,24 +608,24 @@ function InfoItem({
 /* ------------------------------------------------------------------ */
 
 const styles = StyleSheet.create({
-  wrap: { width: "100%", flex: 1 },
+  wrap: { width: '100%', flex: 1 },
 
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing(6),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
-    marginTop: Platform.OS === "web" ? 0 : 30,
+    marginTop: Platform.OS === 'web' ? 0 : 30,
   },
-  headerTitle: { fontSize: 20, fontWeight: "700" },
+  headerTitle: { fontSize: 20, fontWeight: '700' },
   backBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   scrollContent: { flexGrow: 1 },
@@ -550,22 +633,22 @@ const styles = StyleSheet.create({
   /* ---- Empty State ---- */
   emptyWrap: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: spacing(6),
   },
   emptyIconCircle: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: spacing(4),
   },
-  emptyTitle: { fontSize: 20, fontWeight: "700" },
+  emptyTitle: { fontSize: 20, fontWeight: '700' },
   emptyDesc: {
     fontSize: 16,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 22,
     marginTop: spacing(2),
     maxWidth: 280,
@@ -578,7 +661,7 @@ const styles = StyleSheet.create({
     gap: spacing(4),
     ...Platform.select({
       web: {
-        boxShadow: "0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)",
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
       },
       default: {
         shadowOpacity: 0.04,
@@ -591,36 +674,36 @@ const styles = StyleSheet.create({
 
   /* ---- Profile Header ---- */
   profileHeader: {
-    flexDirection: "column",
-    alignItems: "center",
+    flexDirection: 'column',
+    alignItems: 'center',
     gap: spacing(4),
   },
   profileHeaderRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     gap: spacing(5),
   },
   avatar: {
     width: 72,
     height: 72,
     borderRadius: radii.full,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  avatarLetter: { fontSize: 28, fontWeight: "800" },
-  profileMeta: { alignItems: "center" },
-  profileName: { fontSize: 20, fontWeight: "700", textAlign: "center" },
-  profileSub: { fontSize: 16, marginTop: 4, textAlign: "center" },
+  avatarLetter: { fontSize: 28, fontWeight: '800' },
+  profileMeta: { alignItems: 'center' },
+  profileName: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
+  profileSub: { fontSize: 16, marginTop: 4, textAlign: 'center' },
   badgeRow: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: spacing(2),
     marginTop: spacing(3),
-    flexWrap: "wrap",
-    justifyContent: "center",
+    flexWrap: 'wrap',
+    justifyContent: 'center',
   },
   badge: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing(3),
     paddingVertical: spacing(1.5),
     borderRadius: radii.full,
@@ -629,27 +712,27 @@ const styles = StyleSheet.create({
 
   /* ---- Info Grid ---- */
   infoGrid: {
-    flexDirection: "column",
+    flexDirection: 'column',
     gap: spacing(3),
     marginTop: spacing(2),
   },
   infoGridDesktop: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   infoItem: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing(3),
-    minWidth: "45%",
+    minWidth: '45%',
     flex: 1,
   },
   infoIconWrap: {
     width: 36,
     height: 36,
     borderRadius: radii.lg,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoLabel: { fontSize: 14 },
   infoValue: { fontSize: 16, marginTop: 1 },
@@ -660,7 +743,12 @@ const styles = StyleSheet.create({
     padding: spacing(4),
     marginTop: spacing(2),
   },
-  descLabel: { fontSize: 14, marginBottom: spacing(1.5), textTransform: "uppercase", letterSpacing: 0.5 },
+  descLabel: {
+    fontSize: 14,
+    marginBottom: spacing(1.5),
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   desc: { fontSize: 15, lineHeight: 22 },
 
   /* ---- Section Labels ---- */
@@ -668,8 +756,8 @@ const styles = StyleSheet.create({
 
   /* ---- Executives ---- */
   execRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing(3),
     paddingVertical: spacing(3.5),
     paddingHorizontal: spacing(2),
@@ -678,8 +766,8 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   execInitial: { fontSize: 16 },
   execName: { fontSize: 16 },
@@ -693,13 +781,13 @@ const styles = StyleSheet.create({
 
   /* ---- Documents ---- */
   docRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing(3),
     paddingVertical: spacing(3.5),
     paddingHorizontal: spacing(2),
   },
-  docIconWrap: { width: 40, alignItems: "center" },
+  docIconWrap: { width: 40, alignItems: 'center' },
   docTitle: { fontSize: 16 },
   docSub: { fontSize: 14, marginTop: 2 },
   statusBadge: {
@@ -707,10 +795,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing(1.5),
     borderRadius: radii.full,
   },
-  statusBadgeText: { fontSize: 12, textTransform: "capitalize" },
+  statusBadgeText: { fontSize: 12, textTransform: 'capitalize' },
   docEmpty: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing(8),
     gap: spacing(2),
   },
@@ -718,9 +806,9 @@ const styles = StyleSheet.create({
 
   /* ---- Action Button ---- */
   actionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: spacing(4),
     borderRadius: radii.full,
   },

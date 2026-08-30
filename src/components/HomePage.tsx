@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Platform,
   Pressable,
@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useAuth } from "../auth/AuthContext";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 
@@ -17,28 +18,14 @@ import BusTickets from "./BusTickets";
 import EventsTickets from "./EventsTickets";
 import FlightTickets from "./FlightTickets";
 import PaymentPage from "./PaymentPage";
-import PopularTickets from "./PopularTickets";
 import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
 import TourismTickets from "./TourismTickets";
 
 const CATEGORIES = [
-  "Popular Tickets",
   "Bus Tickets",
   "Events Tickets",
   "Tourism Tickets",
   "Flight Tickets",
-];
-
-/* ------------------------------------------------------------------ */
-// Dropdown configs
-/* ------------------------------------------------------------------ */
-const DESKTOP_DROPDOWN = [
-  { label: "Create Account", icon: "user-plus" as const },
-];
-
-const MOBILE_DROPDOWN = [
-  { label: "Create Account", icon: "user-plus" as const },
-  { label: "Settings", icon: "settings" as const },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -54,6 +41,19 @@ function CategoryTabs({
   onSelect: (index: number) => void;
 }) {
   const { colors } = useLumTheme();
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (scrollViewRef.current && selectedIndex !== null) {
+      const timeout = setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          x: Math.max(0, selectedIndex * 120 - 60),
+          animated: true,
+        });
+      }, 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [selectedIndex]);
 
   return (
     <View
@@ -66,9 +66,12 @@ function CategoryTabs({
       ]}
     >
       <ScrollView
+        ref={scrollViewRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.pillsContent}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
       >
         {categories.map((cat, index) => {
           const isSelected = index === selectedIndex;
@@ -80,6 +83,7 @@ function CategoryTabs({
                 styles.pill,
                 {
                   backgroundColor: isSelected ? colors.gold : colors.bgAlt,
+                  transform: isSelected ? [{ scale: 1.05 }] : [{ scale: 1 }],
                 },
               ]}
             >
@@ -87,8 +91,9 @@ function CategoryTabs({
                 style={[
                   styles.pillText,
                   {
-                    color: isSelected ? colors.white : colors.ink,
+                    color: isSelected ? colors.black : colors.ink,
                     fontFamily: fontFamilies.bodySemi,
+                    fontWeight: isSelected ? "700" : "600",
                   },
                 ]}
               >
@@ -114,38 +119,51 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
+  const mobileSearchWidth = Math.min(220, Math.max(140, width * 0.52));
+
+  const { user, logout } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  /** Full-screen ticket purchase flow (config → payment) — hides tabs/search */
   const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
   const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
-
-  /** Standalone category view (no tabs, category handles its own list→config→payment) */
   const [standaloneCategory, setStandaloneCategory] = useState<number | null>(null);
-
-  /** Profile dropdown */
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-
-  /** Notification badge (default) */
   const [notificationCount] = useState(3);
 
   const iconOffset = Platform.OS !== "web" ? { marginTop: 45 } : {};
+  const pageScrollRef = useRef<ScrollView>(null);
+
+  /* ---------- Sync tab press → horizontal page scroll ---------- */
+  useEffect(() => {
+    pageScrollRef.current?.scrollTo({
+      x: selectedCategory * width,
+      animated: true,
+    });
+  }, [selectedCategory, width]);
+
+  /* ---------- Sync horizontal swipe end → active tab ---------- */
+  const handleMomentumScrollEnd = (e: any) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(offsetX / width);
+    if (newIndex >= 0 && newIndex < CATEGORIES.length) {
+      setSelectedCategory(newIndex);
+    }
+  };
 
   /* ---------- Standalone category (self-contained, no tabs) ---------- */
   if (standaloneCategory !== null) {
     const handleBackFromStandalone = () => setStandaloneCategory(null);
     switch (standaloneCategory) {
       case 0:
-        return <PopularTickets onBack={handleBackFromStandalone} />;
-      case 1:
         return <BusTickets onBack={handleBackFromStandalone} />;
-      case 2:
+      case 1:
         return <EventsTickets onBack={handleBackFromStandalone} />;
-      case 3:
+      case 2:
         return <TourismTickets onBack={handleBackFromStandalone} />;
-      case 4:
+      case 3:
         return <FlightTickets onBack={handleBackFromStandalone} />;
       default:
         setStandaloneCategory(null);
@@ -177,31 +195,93 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
     );
   }
 
-  /* ---------- Normal tabbed view ---------- */
-  const renderCategoryPage = () => {
-    switch (selectedCategory) {
-      case 0:
-        return <PopularTickets onSelectTicket={setSelectedTicket} />;
-      case 1:
-        return <BusTickets onSelectTicket={setSelectedTicket} />;
-      case 2:
-        return <EventsTickets onSelectTicket={setSelectedTicket} />;
-      case 3:
-        return <TourismTickets onSelectTicket={setSelectedTicket} />;
-      case 4:
-        return <FlightTickets onSelectTicket={setSelectedTicket} />;
-      default:
-        return null;
-    }
-  };
-
-  const handleDropdownAction = (label: string) => {
+  const handleDropdownAction = async (action: string) => {
     setShowProfileDropdown(false);
-    if (label === "Create Account") onOpenAuth?.();
-    if (label === "Settings") onOpenSettings?.();
+    if (action === "createAccount") onOpenAuth?.();
+    if (action === "settings") onOpenSettings?.();
+    if (action === "logout") await logout();
   };
 
-  const dropdownItems = isDesktop ? DESKTOP_DROPDOWN : MOBILE_DROPDOWN;
+  const renderDropdownContent = () => {
+    if (user) {
+      return (
+        <View style={{ gap: spacing(1) }}>
+          <View style={[styles.userInfoContainer, { borderBottomColor: colors.border }]}>
+            <Text
+              style={[
+                styles.userNameText,
+                { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+              ]}
+              numberOfLines={1}
+            >
+              {user.name || "User"}
+            </Text>
+            <Text
+              style={[
+                styles.userEmailText,
+                { color: colors.inkMuted, fontFamily: fontFamilies.body },
+              ]}
+              numberOfLines={1}
+            >
+              {user.email}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => handleDropdownAction("settings")}
+            style={styles.dropdownItem}
+          >
+            <Feather name="settings" size={18} color={colors.ink} />
+            <Text
+              style={[
+                styles.dropdownText,
+                { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+              ]}
+            >
+              Settings
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => handleDropdownAction("logout")}
+            style={[
+              styles.dropdownItem,
+              { borderTopWidth: 1, borderTopColor: colors.border },
+            ]}
+          >
+            <Feather name="log-out" size={18} color="#EF4444" />
+            <Text
+              style={[
+                styles.dropdownText,
+                { color: "#EF4444", fontFamily: fontFamilies.bodySemi },
+              ]}
+            >
+              Log Out
+            </Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ gap: spacing(1) }}>
+        <Pressable
+          onPress={() => handleDropdownAction("createAccount")}
+          style={styles.dropdownItem}
+        >
+          <Feather name="user-plus" size={18} color={colors.ink} />
+          <Text
+            style={[
+              styles.dropdownText,
+              { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+            ]}
+          >
+            Create Account
+          </Text>
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
@@ -244,12 +324,8 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               />
             </View>
 
-            {/* Right-side icons: notification + profile */}
             <View style={styles.rightIcons}>
-              {/* Notification bell */}
-              <Pressable
-                style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}
-              >
+              <Pressable style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}>
                 <View style={{ position: "relative" }}>
                   <Feather name="bell" size={20} color={colors.inkMuted} />
                   <View style={styles.badge}>
@@ -258,7 +334,6 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                 </View>
               </Pressable>
 
-              {/* Profile with dropdown */}
               <View style={{ position: "relative", zIndex: 60 }}>
                 <Pressable
                   style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}
@@ -284,29 +359,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                         },
                       ]}
                     >
-                      {dropdownItems.map((item, i) => (
-                        <Pressable
-                          key={item.label}
-                          onPress={() => handleDropdownAction(item.label)}
-                          style={[
-                            styles.dropdownItem,
-                            i < dropdownItems.length - 1 && {
-                              borderBottomWidth: 1,
-                              borderBottomColor: colors.border,
-                            },
-                          ]}
-                        >
-                          <Feather name={item.icon} size={18} color={colors.ink} />
-                          <Text
-                            style={[
-                              styles.dropdownText,
-                              { color: colors.ink, fontFamily: fontFamilies.bodySemi },
-                            ]}
-                          >
-                            {item.label}
-                          </Text>
-                        </Pressable>
-                      ))}
+                      {renderDropdownContent()}
                     </View>
                   </>
                 )}
@@ -321,18 +374,75 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
         <View
           style={[
             styles.mobileSearchWrap,
-            { paddingHorizontal: spacing(3), paddingTop: spacing(3) },
+            {
+              paddingHorizontal: spacing(3),
+              paddingTop: spacing(3),
+              zIndex: 1,
+              elevation: 1,
+            },
           ]}
         >
           <View style={styles.mobileActionRow}>
-            {/* Profile with dropdown */}
-            <View style={{ position: "relative", zIndex: 60 }}>
+            {isSearchOpen && (
+              <View
+                style={[
+                  styles.mobileSearchExpander,
+                  {
+                    backgroundColor: colors.bgAlt,
+                    borderColor: colors.gold,
+                    width: mobileSearchWidth,
+                    zIndex: 25,
+                    elevation: 25,
+                  },
+                ]}
+              >
+                <Feather name="search" size={16} color={colors.gold} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search"
+                  placeholderTextColor={colors.inkMuted}
+                  selectionColor={colors.gold}
+                  autoFocus
+                  onBlur={() => {
+                    if (!searchQuery.trim()) setIsSearchOpen(false);
+                  }}
+                  style={[
+                    styles.mobileSearchInput,
+                    { color: colors.ink, fontFamily: fontFamilies.body },
+                  ]}
+                />
+              </View>
+            )}
+
+            {!isSearchOpen && (
               <Pressable
                 style={[
                   styles.iconBtn,
                   { backgroundColor: colors.bgAlt },
                   iconOffset,
+                  { zIndex: 10, elevation: 10 },
                 ]}
+                onPress={() => setIsSearchOpen((prev) => !prev)}
+              >
+                <Feather name="search" size={18} color={colors.gold} />
+              </Pressable>
+            )}
+
+            <Pressable
+              style={[styles.iconBtn, { backgroundColor: colors.bgAlt }, iconOffset]}
+            >
+              <View style={{ position: "relative" }}>
+                <Feather name="bell" size={18} color={colors.inkMuted} />
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notificationCount}</Text>
+                </View>
+              </View>
+            </Pressable>
+
+            <View style={{ position: "relative", zIndex: 20, elevation: 20 }}>
+              <Pressable
+                style={[styles.iconBtn, { backgroundColor: colors.bgAlt }, iconOffset]}
                 onPress={() => setShowProfileDropdown(!showProfileDropdown)}
               >
                 <Feather name="user" size={18} color={colors.inkMuted} />
@@ -349,80 +459,21 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                     style={[
                       styles.dropdown,
                       {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
+                        backgroundColor: colors.bg,
+                        borderColor: colors.gold,
                         shadowColor: colors.shadow,
-                        left: 0,
-                        right: "auto",
+                        right: 0,
+                        left: "auto",
+                        zIndex: 50,
+                        elevation: 50,
                       },
                     ]}
                   >
-                    {dropdownItems.map((item, i) => (
-                      <Pressable
-                        key={item.label}
-                        onPress={() => handleDropdownAction(item.label)}
-                        style={[
-                          styles.dropdownItem,
-                          i < dropdownItems.length - 1 && {
-                            borderBottomWidth: 1,
-                            borderBottomColor: colors.border,
-                          },
-                        ]}
-                      >
-                        <Feather name={item.icon} size={18} color={colors.ink} />
-                        <Text
-                          style={[
-                            styles.dropdownText,
-                            { color: colors.ink, fontFamily: fontFamilies.bodySemi },
-                          ]}
-                        >
-                          {item.label}
-                        </Text>
-                      </Pressable>
-                    ))}
+                    {renderDropdownContent()}
                   </View>
                 </>
               )}
             </View>
-
-            {/* Notification bell */}
-            <Pressable
-              style={[
-                styles.iconBtn,
-                { backgroundColor: colors.bgAlt },
-                iconOffset,
-              ]}
-            >
-              <View style={{ position: "relative" }}>
-                <Feather name="bell" size={18} color={colors.inkMuted} />
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{notificationCount}</Text>
-                </View>
-              </View>
-            </Pressable>
-          </View>
-          <View
-            style={[
-              styles.mobileSearchBar,
-              {
-                backgroundColor: colors.bgAlt,
-                borderWidth: 1,
-                borderColor: colors.inkMuted,
-              },
-            ]}
-          >
-            <Feather name="search" size={20} color={colors.inkMuted} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search"
-              placeholderTextColor={colors.inkMuted}
-              selectionColor={colors.gold}
-              style={[
-                styles.mobileSearchInput,
-                { color: colors.ink, fontFamily: fontFamilies.body },
-              ]}
-            />
           </View>
         </View>
       )}
@@ -434,8 +485,29 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
         onSelect={setSelectedCategory}
       />
 
-      {/* Active category page */}
-      <View style={{ flex: 1 }}>{renderCategoryPage()}</View>
+      {/* Horizontal swipeable pages */}
+      <ScrollView
+        ref={pageScrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}
+      >
+        <View style={{ width, flex: 1 }}>
+          <BusTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <EventsTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <TourismTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <FlightTickets onSelectTicket={setSelectedTicket} />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -475,6 +547,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing(4),
     gap: 10,
+    zIndex: 2,
+    overflow: "visible",
   },
   desktopSearchInput: {
     flex: 1,
@@ -485,6 +559,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     paddingVertical: 0,
+    minWidth: 0,
   },
   iconBtn: {
     width: 48,
@@ -501,12 +576,29 @@ const styles = StyleSheet.create({
   mobileSearchWrap: {
     paddingBottom: spacing(2),
     gap: spacing(2),
+    zIndex: 1,
+    elevation: 1,
+    overflow: "visible",
   },
   mobileActionRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     gap: spacing(2),
+    overflow: "visible",
+  },
+  mobileSearchExpander: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 42,
+    minWidth: 140,
+    maxWidth: "72%",
+    borderRadius: radii.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing(3),
+    gap: spacing(2),
+    marginRight: spacing(1),
+    overflow: "visible",
   },
   pillsWrapper: {
     borderBottomWidth: 1,
@@ -526,26 +618,26 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 14,
   },
-
-  /* ---- Dropdown ---- */
   dropdown: {
     position: "absolute",
     top: 54,
     right: 0,
-    minWidth: 220,
+    minWidth: 180,
     borderRadius: radii.xl,
     borderWidth: 1,
     paddingVertical: spacing(2),
     paddingHorizontal: spacing(2),
+    zIndex: 5000,
+    elevation: 5000,
     ...Platform.select({
       web: {
-        boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+        boxShadow: "0 12px 28px rgba(11,31,58,0.28)",
       },
       default: {
-        shadowOpacity: 0.1,
-        shadowRadius: 20,
-        shadowOffset: { width: 0, height: 8 },
-        elevation: 10,
+        shadowOpacity: 0.22,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 12 },
+        elevation: 5000,
       },
     }),
   },
@@ -560,8 +652,19 @@ const styles = StyleSheet.create({
   dropdownText: {
     fontSize: 15,
   },
-
-  /* ---- Notification Badge ---- */
+  userInfoContainer: {
+    paddingVertical: spacing(2),
+    paddingHorizontal: spacing(3),
+    borderBottomWidth: 1,
+    marginBottom: spacing(1),
+  },
+  userNameText: {
+    fontSize: 15,
+  },
+  userEmailText: {
+    fontSize: 13,
+    marginTop: 2,
+  },
   badge: {
     position: "absolute",
     top: -6,

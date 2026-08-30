@@ -1,11 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import {
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
+    Platform,
+    Pressable,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { radii, spacing } from "../theme/tokens";
@@ -18,20 +18,20 @@ interface NavbarProps {
   onNavigate: (route: RouteName) => void;
 }
 
-const SIDEBAR_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName }[] = [
-  { icon: "home", route: "Home" },
-  { icon: "search", route: "Search" },
-  { icon: "plus-square", route: "Create" },
-  { icon: "message-circle", route: "Messaging" },
-  { icon: "bell", route: "Feeds" },
+const SIDEBAR_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; label: string }[] = [
+  { icon: "home", route: "Home", label: "Home" },
+  { icon: "search", route: "Search", label: "Search" },
+  { icon: "plus-square", route: "Create", label: "Create" },
+  { icon: "message-circle", route: "Messaging", label: "Messages" },
+  { icon: "bell", route: "Feeds", label: "Feeds" },
 ];
 
-const MOBILE_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName }[] = [
-  { icon: "home", route: "Home" },
-  { icon: "search", route: "Search" },
-  { icon: "plus-circle", route: "Create" },
-  { icon: "message-circle", route: "Messaging" }, // swapped user → message-circle so all 5 pages are reachable
-  { icon: "bell", route: "Feeds" },
+const MOBILE_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; label: string }[] = [
+  { icon: "home", route: "Home", label: "Home" },
+  { icon: "search", route: "Search", label: "Search" },
+  { icon: "plus-circle", route: "Create", label: "Create" },
+  { icon: "message-circle", route: "Messaging", label: "Messages" },
+  { icon: "bell", route: "Feeds", label: "Feeds" },
 ];
 
 function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
@@ -60,46 +60,63 @@ function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
       {/* Divider line */}
       <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-      {/* Icons only */}
       <View style={styles.navStack}>
         {SIDEBAR_ITEMS.map((item) => {
           const isActive = item.route === currentRoute;
           return (
             <Pressable
               key={item.route}
-              style={styles.iconBtn}
+              style={[styles.iconBtn, isActive && styles.activeIconBtn]}
               onPress={() => onNavigate(item.route)}
             >
               {item.route === "Feeds" ? (
                 <ReelsIcon
-                  size={24}
+                  size={22}
                   color={isActive ? colors.inkMuted : colors.gold}
                 />
               ) : (
                 <Feather
                   name={item.icon}
-                  size={24}
+                  size={22}
                   color={isActive ? colors.inkMuted : colors.gold}
                 />
               )}
+              <Text
+                style={[
+                  styles.navLabel,
+                  {
+                    color: isActive ? colors.ink : colors.gold,
+                  },
+                ]}
+              >
+                {item.label}
+              </Text>
             </Pressable>
           );
         })}
       </View>
 
-      {/* Divider line before profile/settings */}
       <View style={[styles.divider, { backgroundColor: colors.border, marginTop: "auto" }]} />
 
-      {/* Settings at bottom */}
       <Pressable
-        style={styles.profileBtn}
+        style={[styles.profileBtn, currentRoute === "Settings" && styles.activeIconBtn]}
         onPress={() => onNavigate("Settings")}
       >
         <Feather
           name="settings"
-          size={24}
+          size={22}
           color={currentRoute === "Settings" ? colors.inkMuted : colors.gold}
         />
+        <Text
+          style={[
+            styles.navLabel,
+            {
+              color: currentRoute === "Settings" ? colors.ink : colors.gold,
+            },
+          ]}
+        >
+          Settings
+        </Text>
       </Pressable>
     </View>
   );
@@ -131,16 +148,26 @@ function MobileBottomNav({ currentRoute, onNavigate }: NavbarProps) {
           >
             {item.route === "Feeds" ? (
               <ReelsIcon
-                size={26}
+                size={22}
                 color={isActive ? colors.inkMuted : colors.gold}
               />
             ) : (
               <Feather
                 name={item.icon}
-                size={26}
+                size={22}
                 color={isActive ? colors.inkMuted : colors.gold}
               />
             )}
+            <Text
+              style={[
+                styles.mobileLabel,
+                {
+                  color: isActive ? colors.ink : colors.gold,
+                },
+              ]}
+            >
+              {item.label}
+            </Text>
           </Pressable>
         );
       })}
@@ -156,7 +183,7 @@ export default function Navbar(props: NavbarProps) {
 
 const styles = StyleSheet.create({
   sidebar: {
-    width: 72,
+    width: 92,
     borderRightWidth: 1,
     alignItems: "center",
     paddingTop: Platform.OS === "ios" ? spacing(10) : spacing(5),
@@ -182,40 +209,60 @@ const styles = StyleSheet.create({
     marginVertical: spacing(2),
   },
   navStack: {
-    gap: spacing(2),
-    alignItems: "center",
+    gap: spacing(1.5),
+    alignItems: "stretch",
+    width: "100%",
+    paddingHorizontal: spacing(2),
   },
   iconBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.full,
+    width: "100%",
+    minHeight: 56,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
+    gap: spacing(1),
+    paddingVertical: spacing(1.5),
+  },
+  activeIconBtn: {
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  navLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.2,
   },
   profileBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.full,
+    width: "100%",
+    minHeight: 56,
+    borderRadius: radii.md,
     alignItems: "center",
     justifyContent: "center",
+    gap: spacing(1),
+    paddingVertical: spacing(1.5),
     marginBottom: spacing(2),
   },
   mobileNav: {
-    minHeight: 60,
+    minHeight: 76,
     borderTopWidth: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
     paddingTop: spacing(2),
     paddingBottom: Platform.OS === "web" ? spacing(2) : spacing(12),
-    elevation: 20,
-    zIndex: 1000,
-    overflow: "hidden",
+    elevation: 50,
+    zIndex: 50,
+    overflow: "visible",
   },
   tabItem: {
     alignItems: "center",
     justifyContent: "center",
     flex: 1,
-    height: "100%",
+    minHeight: 50,
+    gap: spacing(0.5),
+  },
+  mobileLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    letterSpacing: 0.15,
   },
 });

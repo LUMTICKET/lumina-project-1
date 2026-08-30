@@ -135,7 +135,7 @@ export default function Settings() {
       <BusinessProfileForm
         existing={profile}
         onBack={() => setRoute(profile ? "business_profile" : "list")}
-        onSave={(p) => {
+        onSave={async (p) => {
           setProfile(p);
           setRoute("business_profile");
         }}

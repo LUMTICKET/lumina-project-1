@@ -382,7 +382,12 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
   );
 
   return (
-    <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
+    <ScrollView
+      style={[styles.wrap, { backgroundColor: colors.bg }]}
+      contentContainerStyle={styles.wrapContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
       {isDesktop && (
         <View
           style={[
@@ -577,12 +582,13 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
           </View>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { width: "100%", minHeight: "100%" },
+  wrap: { width: "100%", flex: 1 },
+  wrapContent: { minHeight: "100%" },
   searchBarWrap: {
     borderBottomWidth: 1,
     paddingVertical: spacing(3),

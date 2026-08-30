@@ -1,12 +1,12 @@
 import { AuthProvider } from "@/context/AuthContext";
-import { Slot } from "expo-router";
+import { Stack } from "expo-router";
 import { LumThemeProvider } from "../theme/ThemeContext";
 
 export default function RootLayout() {
   return (
     <LumThemeProvider>
       <AuthProvider>
-        <Slot />
+        <Stack screenOptions={{ headerShown: false }} />
       </AuthProvider>
     </LumThemeProvider>
   );

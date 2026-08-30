@@ -26,6 +26,20 @@ jobs:
     name: Validate applications
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: lumina
+          POSTGRES_USER: lumina
+          POSTGRES_PASSWORD: lumina
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lumina -d lumina"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Check out repository
@@ -81,3 +95,13 @@ jobs:
 
       - name: Build backend
         run: npm run build --prefix backend
+
+      - name: Apply backend migrations
+        run: npm run db:migrate:deploy --prefix backend
+        env:
+          DATABASE_URL: postgresql://lumina:lumina@localhost:5432/lumina?schema=public
+
+      - name: Test backend integration contracts
+        run: npm run test:integration --prefix backend
+        env:
+          DATABASE_URL: postgresql://lumina:lumina@localhost:5432/lumina?schema=public

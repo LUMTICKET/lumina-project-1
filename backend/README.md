@@ -112,8 +112,11 @@ only return published events.
 
 ## Validation
 
-Run npm run lint, npm run typecheck, npm run db:validate, npm run build, and
-npm audit --audit-level=high before submitting backend changes.
+Run npm run lint, npm run typecheck, npm run db:validate, npm run build,
+npm run test:integration, and npm audit --audit-level=high before submitting
+backend changes. Integration tests require an up-to-date PostgreSQL database
+configured by `DATABASE_URL`; they create isolated records and remove them
+after the suite.
 
 ## Current foundation
 

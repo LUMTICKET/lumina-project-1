@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 import AuthModal from "../components/AuthModal";
 import Create from "../components/Create";
 import Feeds from "../components/Feeds";
@@ -7,9 +7,8 @@ import HomePage from "../components/HomePage";
 import Messaging from "../components/Messaging";
 import Navbar from "../components/Navbar";
 import SearchPage from "../components/SearchPage";
-import { useLumTheme } from "../theme/ThemeContext";
-
 import Settings from "../components/Settings";
+import { useLumTheme } from "../theme/ThemeContext";
 
 type RouteName = "Home" | "Search" | "Create" | "Messaging" | "Feeds" | "Settings";
 type PageProps = {
@@ -44,22 +43,21 @@ export default function LandingPage() {
 
       <Navbar currentRoute={currentRoute} onNavigate={setCurrentRoute} />
 
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
+      {/* Changed from ScrollView → View to avoid gesture conflicts with HomePage's horizontal swipe */}
+      <View
+        style={[
+          styles.content,
           {
             paddingLeft: isDesktop ? 92 : 0,
             paddingBottom: isDesktop ? 0 : 60,
           },
         ]}
-        showsVerticalScrollIndicator={false}
       >
         <PageComponent
           onOpenAuth={() => setAuthModalVisible(true)}
           onOpenSettings={() => setCurrentRoute("Settings")}
         />
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -68,10 +66,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scroll: {
+  content: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
 });

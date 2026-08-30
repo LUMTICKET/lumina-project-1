@@ -1,15 +1,14 @@
 import { Feather } from "@expo/vector-icons";
-import { useRef, useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-    PanResponder,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    useWindowDimensions,
-    View,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useAuth } from "../context/AuthContext";
 import { useLumTheme } from "../theme/ThemeContext";
@@ -19,12 +18,10 @@ import BusTickets from "./BusTickets";
 import EventsTickets from "./EventsTickets";
 import FlightTickets from "./FlightTickets";
 import PaymentPage from "./PaymentPage";
-import PopularTickets from "./PopularTickets";
 import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
 import TourismTickets from "./TourismTickets";
 
 const CATEGORIES = [
-  "Popular Tickets",
   "Bus Tickets",
   "Events Tickets",
   "Tourism Tickets",
@@ -46,15 +43,13 @@ function CategoryTabs({
   const { colors } = useLumTheme();
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Auto-scroll to active category when selected index changes
   useEffect(() => {
     if (scrollViewRef.current && selectedIndex !== null) {
-      // Scroll after a brief delay to ensure layout is calculated
       const timeout = setTimeout(() => {
         scrollViewRef.current?.scrollToIndex?.({
           index: selectedIndex,
           animated: true,
-          viewPosition: 0.5, // Center the active tab
+          viewPosition: 0.5,
         } as any);
       }, 50);
       return () => clearTimeout(timeout);
@@ -133,58 +128,43 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  /** Full-screen ticket purchase flow (config → payment) — hides tabs/search */
   const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
   const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
-
-  /** Standalone category view (no tabs, category handles its own list→config→payment) */
   const [standaloneCategory, setStandaloneCategory] = useState<number | null>(null);
-
-  /** Profile dropdown */
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-
-  /** Notification badge (default) */
   const [notificationCount] = useState(3);
 
   const iconOffset = Platform.OS !== "web" ? { marginTop: 45 } : {};
+  const pageScrollRef = useRef<ScrollView>(null);
 
-  /* ---------- Swipe gesture for categories (MUST be before early returns) ---------- */
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        const { dx, dy } = gestureState;
-        // Allow swipe if horizontal movement is greater than vertical
-        return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10;
-      },
-      onPanResponderRelease: (evt, gestureState) => {
-        const { dx } = gestureState;
-        const minDistance = 30;
+  /* ---------- Sync tab press → horizontal page scroll ---------- */
+  useEffect(() => {
+    pageScrollRef.current?.scrollTo({
+      x: selectedCategory * width,
+      animated: true,
+    });
+  }, [selectedCategory, width]);
 
-        if (dx > minDistance && selectedCategory > 0) {
-          // Swipe right: go to previous category
-          setSelectedCategory(selectedCategory - 1);
-        } else if (dx < -minDistance && selectedCategory < CATEGORIES.length - 1) {
-          // Swipe left: go to next category
-          setSelectedCategory(selectedCategory + 1);
-        }
-      },
-    })
-  ).current;
+  /* ---------- Sync horizontal swipe end → active tab ---------- */
+  const handleMomentumScrollEnd = (e: any) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(offsetX / width);
+    if (newIndex >= 0 && newIndex < CATEGORIES.length) {
+      setSelectedCategory(newIndex);
+    }
+  };
 
   /* ---------- Standalone category (self-contained, no tabs) ---------- */
   if (standaloneCategory !== null) {
     const handleBackFromStandalone = () => setStandaloneCategory(null);
     switch (standaloneCategory) {
       case 0:
-        return <PopularTickets onBack={handleBackFromStandalone} />;
-      case 1:
         return <BusTickets onBack={handleBackFromStandalone} />;
-      case 2:
+      case 1:
         return <EventsTickets onBack={handleBackFromStandalone} />;
-      case 3:
+      case 2:
         return <TourismTickets onBack={handleBackFromStandalone} />;
-      case 4:
+      case 3:
         return <FlightTickets onBack={handleBackFromStandalone} />;
       default:
         setStandaloneCategory(null);
@@ -216,24 +196,6 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
     );
   }
 
-  /* ---------- Normal tabbed view ---------- */
-  const renderCategoryPage = () => {
-    switch (selectedCategory) {
-      case 0:
-        return <PopularTickets onSelectTicket={setSelectedTicket} />;
-      case 1:
-        return <BusTickets onSelectTicket={setSelectedTicket} />;
-      case 2:
-        return <EventsTickets onSelectTicket={setSelectedTicket} />;
-      case 3:
-        return <TourismTickets onSelectTicket={setSelectedTicket} />;
-      case 4:
-        return <FlightTickets onSelectTicket={setSelectedTicket} />;
-      default:
-        return null;
-    }
-  };
-
   const handleDropdownAction = async (action: string) => {
     setShowProfileDropdown(false);
     if (action === "createAccount") onOpenAuth?.();
@@ -245,7 +207,6 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
     if (user) {
       return (
         <View style={{ gap: spacing(1) }}>
-          {/* User Info Header */}
           <View style={[styles.userInfoContainer, { borderBottomColor: colors.border }]}>
             <Text
               style={[
@@ -282,7 +243,6 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
             </Text>
           </Pressable>
 
-          {/* Logout Button */}
           <Pressable
             onPress={() => handleDropdownAction("logout")}
             style={[
@@ -365,12 +325,8 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               />
             </View>
 
-            {/* Right-side icons: notification + profile */}
             <View style={styles.rightIcons}>
-              {/* Notification bell */}
-              <Pressable
-                style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}
-              >
+              <Pressable style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}>
                 <View style={{ position: "relative" }}>
                   <Feather name="bell" size={20} color={colors.inkMuted} />
                   <View style={styles.badge}>
@@ -379,7 +335,6 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                 </View>
               </Pressable>
 
-              {/* Profile with dropdown */}
               <View style={{ position: "relative", zIndex: 60 }}>
                 <Pressable
                   style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}
@@ -476,11 +431,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
             )}
 
             <Pressable
-              style={[
-                styles.iconBtn,
-                { backgroundColor: colors.bgAlt },
-                iconOffset,
-              ]}
+              style={[styles.iconBtn, { backgroundColor: colors.bgAlt }, iconOffset]}
             >
               <View style={{ position: "relative" }}>
                 <Feather name="bell" size={18} color={colors.inkMuted} />
@@ -490,14 +441,9 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               </View>
             </Pressable>
 
-            {/* Profile with dropdown */}
             <View style={{ position: "relative", zIndex: 20, elevation: 20 }}>
               <Pressable
-                style={[
-                  styles.iconBtn,
-                  { backgroundColor: colors.bgAlt },
-                  iconOffset,
-                ]}
+                style={[styles.iconBtn, { backgroundColor: colors.bgAlt }, iconOffset]}
                 onPress={() => setShowProfileDropdown(!showProfileDropdown)}
               >
                 <Feather name="user" size={18} color={colors.inkMuted} />
@@ -540,10 +486,29 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
         onSelect={setSelectedCategory}
       />
 
-      {/* Active category page */}
-      <View style={{ flex: 1 }} {...panResponder.panHandlers}>
-        {renderCategoryPage()}
-      </View>
+      {/* Horizontal swipeable pages */}
+      <ScrollView
+        ref={pageScrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}
+      >
+        <View style={{ width, flex: 1 }}>
+          <BusTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <EventsTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <TourismTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <FlightTickets onSelectTicket={setSelectedTicket} />
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -654,8 +619,6 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 14,
   },
-
-  /* ---- Dropdown ---- */
   dropdown: {
     position: "absolute",
     top: 54,
@@ -703,8 +666,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-
-  /* ---- Notification Badge ---- */
   badge: {
     position: "absolute",
     top: -6,

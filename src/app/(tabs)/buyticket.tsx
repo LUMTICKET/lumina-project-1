@@ -1,20 +1,21 @@
+import BuyTickets from "@/components/BuyTickets";
 import Navbar from "@/components/Navbar";
 import { useLumTheme } from "@/theme/ThemeContext";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 
-type TabRoute = "Home" | "Search" | "Create" | "Messaging" | "Feeds" | "Settings";
+type TabRoute = "Home" | "BuyTicket" | "Create" | "Messaging" | "Feeds" | "Settings";
 
 const ROUTE_MAP: Record<TabRoute, string> = {
   Home: "/(tabs)/home",
-  Search: "/(tabs)/search",
+  BuyTicket: "/(tabs)/buyticket",
   Create: "/(tabs)/create",
   Messaging: "/(tabs)/messaging",
   Feeds: "/(tabs)/feeds",
   Settings: "/(tabs)/settings",
 };
 
-export default function SearchTabScreen() {
+export default function FeedsTabScreen() {
   const router = useRouter();
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
@@ -26,7 +27,7 @@ export default function SearchTabScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      <Navbar currentRoute="Search" onNavigate={handleNavigate} />
+      <Navbar currentRoute="BuyTicket" onNavigate={handleNavigate} />
       <View
         style={[
           styles.content,
@@ -36,10 +37,7 @@ export default function SearchTabScreen() {
           },
         ]}
       >
-        <View style={styles.card}>
-          <Text style={[styles.title, { color: colors.ink }]}>Buy Tickets</Text>
-          <Text style={[styles.subtitle, { color: colors.inkMuted }]}>I will do on it</Text>
-        </View>
+        <BuyTickets />
       </View>
     </View>
   );
@@ -51,26 +49,5 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 420,
-    padding: 28,
-    borderRadius: 20,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.08)",
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
   },
 });

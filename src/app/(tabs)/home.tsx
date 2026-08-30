@@ -3,11 +3,11 @@ import { useLumTheme } from "@/theme/ThemeContext";
 import { useRouter } from "expo-router";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
-type TabRoute = "Home" | "Search" | "Create" | "Messaging" | "Feeds" | "Settings";
+type TabRoute = "Home" | "BuyTicket" | "Create" | "Messaging" | "Feeds" | "Settings";
 
 const ROUTE_MAP: Record<TabRoute, string> = {
   Home: "/(tabs)/home",
-  Search: "/(tabs)/search",
+  BuyTicket: "/(tabs)/buyticket",
   Create: "/(tabs)/create",
   Messaging: "/(tabs)/messaging",
   Feeds: "/(tabs)/feeds",

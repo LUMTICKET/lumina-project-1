@@ -1,17 +1,17 @@
 import { Feather } from "@expo/vector-icons";
 import {
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    View,
-    useWindowDimensions,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { radii, spacing } from "../theme/tokens";
 import ReelsIcon from "./ReelsIcon";
 
-type RouteName = "Home" | "Search" | "Create" | "Messaging" | "Feeds" | "Settings";
+type RouteName = "Home" | "BuyTicket" | "Create" | "Messaging" | "Feeds" | "Settings";
 
 interface NavbarProps {
   currentRoute: RouteName;
@@ -20,7 +20,7 @@ interface NavbarProps {
 
 const SIDEBAR_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; label: string }[] = [
   { icon: "home", route: "Home", label: "Home" },
-  { icon: "shopping-bag", route: "Search", label: "Buy Tickets" },
+  { icon: "shopping-bag", route: "BuyTicket", label: "Buy Tickets" },
   { icon: "plus-square", route: "Create", label: "Create" },
   { icon: "message-circle", route: "Messaging", label: "Messages" },
   { icon: "bell", route: "Feeds", label: "Feeds" },
@@ -28,7 +28,7 @@ const SIDEBAR_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; la
 
 const MOBILE_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; label: string }[] = [
   { icon: "home", route: "Home", label: "Home" },
-  { icon: "shopping-bag", route: "Search", label: "Buy" },
+  { icon: "shopping-bag", route: "BuyTicket", label: "Buy" },
   { icon: "plus-circle", route: "Create", label: "Create" },
   { icon: "message-circle", route: "Messaging", label: "Messages" },
   { icon: "bell", route: "Feeds", label: "Feeds" },

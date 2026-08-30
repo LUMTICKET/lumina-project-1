@@ -1,5 +1,8 @@
 import {
+  CourierListingStatus,
+  CourierServiceLevel,
   EventStatus,
+  ParcelStatus,
   PostMediaType,
   PostStatus,
   PrismaClient,
@@ -49,6 +52,17 @@ async function main() {
     },
   });
 
+  const courierOwner = await prisma.user.upsert({
+    where: { email: "seed-courier@lumina.local" },
+    update: { name: "CTS Courier", role: UserRole.ORGANIZER },
+    create: {
+      email: "seed-courier@lumina.local",
+      name: "CTS Courier",
+      passwordHash: "disabled$seed$account",
+      role: UserRole.ORGANIZER,
+    },
+  });
+
   const sulom = await prisma.organizer.upsert({
     where: { id: "org-sulom" },
     update: {
@@ -72,6 +86,115 @@ async function main() {
       ownerId: feedAuthor.id,
     },
   });
+
+  const ctsCourier = await prisma.organizer.upsert({
+    where: { id: "org-cts-courier" },
+    update: { name: "CTS Courier", ownerId: courierOwner.id },
+    create: {
+      id: "org-cts-courier",
+      name: "CTS Courier",
+      ownerId: courierOwner.id,
+    },
+  });
+
+  const courierListing = await prisma.courierListing.upsert({
+    where: { id: "courier-cts" },
+    update: {
+      organizerId: ctsCourier.id,
+      name: "CTS Courier",
+      description:
+        "Reliable same-day and standard parcel delivery across Malawi's major cities.",
+      serviceAreas: ["Blantyre", "Lilongwe", "Mzuzu", "Zomba"],
+      serviceLevels: [
+        CourierServiceLevel.SAME_DAY,
+        CourierServiceLevel.NEXT_DAY,
+        CourierServiceLevel.STANDARD,
+      ],
+      basePriceMinor: 1700000,
+      currency: "MWK",
+      estimatedMinHours: 4,
+      estimatedMaxHours: 72,
+      status: CourierListingStatus.ACTIVE,
+    },
+    create: {
+      id: "courier-cts",
+      organizerId: ctsCourier.id,
+      name: "CTS Courier",
+      description:
+        "Reliable same-day and standard parcel delivery across Malawi's major cities.",
+      serviceAreas: ["Blantyre", "Lilongwe", "Mzuzu", "Zomba"],
+      serviceLevels: [
+        CourierServiceLevel.SAME_DAY,
+        CourierServiceLevel.NEXT_DAY,
+        CourierServiceLevel.STANDARD,
+      ],
+      basePriceMinor: 1700000,
+      currency: "MWK",
+      estimatedMinHours: 4,
+      estimatedMaxHours: 72,
+      status: CourierListingStatus.ACTIVE,
+    },
+  });
+
+  const demoParcel = await prisma.parcel.upsert({
+    where: { trackingCode: "LMN-DEMO-2026" },
+    update: {
+      courierListingId: courierListing.id,
+      status: ParcelStatus.IN_TRANSIT,
+      origin: "Blantyre",
+      destination: "Lilongwe",
+      estimatedDelivery: new Date("2026-08-31T16:00:00+02:00"),
+    },
+    create: {
+      id: "parcel-demo-2026",
+      trackingCode: "LMN-DEMO-2026",
+      courierListingId: courierListing.id,
+      createdById: courierOwner.id,
+      origin: "Blantyre",
+      destination: "Lilongwe",
+      recipientName: "Demo Recipient",
+      recipientContact: "private-demo-contact",
+      contentsDescription: "Demonstration parcel",
+      status: ParcelStatus.IN_TRANSIT,
+      estimatedDelivery: new Date("2026-08-31T16:00:00+02:00"),
+    },
+  });
+
+  const trackingEvents = [
+    {
+      id: "tracking-demo-created",
+      status: ParcelStatus.CREATED,
+      location: "Blantyre",
+      message: "Shipment created",
+      occurredAt: new Date("2026-08-30T08:00:00+02:00"),
+    },
+    {
+      id: "tracking-demo-received",
+      status: ParcelStatus.RECEIVED,
+      location: "Blantyre Depot",
+      message: "Parcel received at the origin depot",
+      occurredAt: new Date("2026-08-30T09:15:00+02:00"),
+    },
+    {
+      id: "tracking-demo-transit",
+      status: ParcelStatus.IN_TRANSIT,
+      location: "M1 Northbound",
+      message: "Parcel is travelling to the destination hub",
+      occurredAt: new Date("2026-08-30T12:30:00+02:00"),
+    },
+  ];
+
+  for (const trackingEvent of trackingEvents) {
+    await prisma.parcelTrackingEvent.upsert({
+      where: { id: trackingEvent.id },
+      update: trackingEvent,
+      create: {
+        ...trackingEvent,
+        parcelId: demoParcel.id,
+        createdById: courierOwner.id,
+      },
+    });
+  }
 
   const stadium = await prisma.venue.upsert({
     where: { id: "venue-bingu-stadium" },

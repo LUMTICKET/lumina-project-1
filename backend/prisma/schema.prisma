@@ -48,6 +48,27 @@ enum PostReportStatus {
   ACTIONED
 }
 
+enum CourierListingStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum CourierServiceLevel {
+  SAME_DAY
+  NEXT_DAY
+  STANDARD
+}
+
+enum ParcelStatus {
+  CREATED
+  RECEIVED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  EXCEPTION
+  CANCELLED
+}
+
 model User {
   id           String        @id @default(cuid())
   email        String        @unique
@@ -61,6 +82,8 @@ model User {
   postReactions  PostReaction[]
   postReports    PostReport[]  @relation("PostReporter")
   moderatedPostReports PostReport[] @relation("PostReportModerator")
+  createdParcels Parcel[] @relation("ParcelCreator")
+  parcelTrackingEvents ParcelTrackingEvent[] @relation("ParcelTrackingActor")
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -85,8 +108,70 @@ model Organizer {
   name      String
   avatarUrl String?
   events    Event[]
+  courierListings CourierListing[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CourierListing {
+  id                String               @id @default(cuid())
+  organizerId       String
+  organizer         Organizer            @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  name              String
+  description       String
+  logoUrl           String?
+  serviceAreas      String[]
+  serviceLevels     CourierServiceLevel[]
+  basePriceMinor    Int
+  currency          String               @db.Char(3)
+  estimatedMinHours Int
+  estimatedMaxHours Int
+  contactEmail      String?
+  contactPhone      String?
+  status            CourierListingStatus @default(ACTIVE)
+  parcels           Parcel[]
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  @@index([status, name])
+  @@index([organizerId])
+}
+
+model Parcel {
+  id                  String                @id @default(cuid())
+  trackingCode        String                @unique
+  courierListingId    String
+  courierListing      CourierListing        @relation(fields: [courierListingId], references: [id], onDelete: Cascade)
+  createdById         String
+  createdBy           User                  @relation("ParcelCreator", fields: [createdById], references: [id])
+  origin              String
+  destination         String
+  recipientName       String
+  recipientContact    String
+  contentsDescription String?
+  status              ParcelStatus          @default(CREATED)
+  estimatedDelivery   DateTime?
+  trackingEvents      ParcelTrackingEvent[]
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+
+  @@index([courierListingId, createdAt])
+  @@index([status])
+}
+
+model ParcelTrackingEvent {
+  id          String       @id @default(cuid())
+  parcelId    String
+  parcel      Parcel       @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  status      ParcelStatus
+  location    String?
+  message     String
+  occurredAt  DateTime     @default(now())
+  createdById String
+  createdBy   User         @relation("ParcelTrackingActor", fields: [createdById], references: [id])
+  createdAt   DateTime     @default(now())
+
+  @@index([parcelId, occurredAt])
 }
 
 model Venue {

@@ -117,6 +117,15 @@ export async function getCourierListing(listingId: string) {
   return listing ? mapListing(listing) : null;
 }
 
+export async function listOrganizerCourierListings(organizerId: string) {
+  const listings = await prisma.courierListing.findMany({
+    where: { organizerId },
+    include: listingInclude,
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+  });
+  return listings.map(mapListing);
+}
+
 export async function createCourierListing(
   organizerId: string,
   input: CreateCourierListingInput,

@@ -15,29 +15,41 @@ import {
   View,
 } from "react-native";
 import { toEventTicketConfig } from "../api/event-ticket";
+import {
+  type ApiCourierListing,
+  fetchCourierListings,
+} from "../api/couriers";
 import { type ApiEvent, fetchEvents } from "../api/events";
 import { type ApiVenue, fetchVenues } from "../api/venues";
 import { type ApiPost, fetchPosts } from "../api/posts";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
+import CourierDetails from "./CourierDetails";
 import PaymentPage from "./PaymentPage";
 import TicketConfigPage, {
   type PurchasePayload,
   type TicketConfig,
 } from "./TicketConfigPage";
 
-type SearchCategory = "all" | "events" | "venues" | "posts";
+type SearchCategory = "all" | "events" | "venues" | "posts" | "couriers";
 
 const CATEGORIES: { label: string; value: SearchCategory }[] = [
   { label: "All", value: "all" },
   { label: "Events", value: "events" },
   { label: "Venues", value: "venues" },
   { label: "Posts", value: "posts" },
+  { label: "Couriers", value: "couriers" },
 ];
 
 const VENUE_IMAGES = [
   require("@/assets/images/event1.jpg"),
   require("@/assets/images/event4.jpg"),
+];
+
+const COURIER_IMAGES = [
+  require("@/assets/images/courier_1.jpg"),
+  require("@/assets/images/courier_2.jpg"),
+  require("@/assets/images/courier_3.jpg"),
 ];
 
 interface EventSearchCard {
@@ -73,7 +85,22 @@ interface PostSearchCard {
   post: ApiPost;
 }
 
-type SearchCard = EventSearchCard | VenueSearchCard | PostSearchCard;
+interface CourierSearchCard {
+  id: string;
+  kind: "courier";
+  title: string;
+  subtitle: string;
+  image: ImageSourcePropType;
+  height: number;
+  tag: string;
+  courier: ApiCourierListing;
+}
+
+type SearchCard =
+  | EventSearchCard
+  | VenueSearchCard
+  | PostSearchCard
+  | CourierSearchCard;
 
 function eventCard(event: ApiEvent, index: number): EventSearchCard {
   const ticket = toEventTicketConfig(event);
@@ -123,18 +150,46 @@ function postCard(post: ApiPost, index: number): PostSearchCard {
   };
 }
 
+function courierCard(
+  courier: ApiCourierListing,
+  index: number,
+): CourierSearchCard {
+  const serviceLabel = courier.serviceLevels
+    .map((level) => level.replaceAll("_", " "))
+    .join(" · ");
+  return {
+    id: `courier-${courier.id}`,
+    kind: "courier",
+    title: courier.name,
+    subtitle: `${courier.serviceAreas.join(", ")} · ${serviceLabel}`,
+    image: courier.logoUrl
+      ? { uri: courier.logoUrl }
+      : COURIER_IMAGES[index % COURIER_IMAGES.length],
+    height: 245 + (index % 2) * 35,
+    tag: "Courier",
+    courier,
+  };
+}
+
 function combineCards(
   events: EventSearchCard[],
   venues: VenueSearchCard[],
   posts: PostSearchCard[],
+  couriers: CourierSearchCard[],
 ) {
   const cards: SearchCard[] = [];
-  const count = Math.max(events.length, venues.length, posts.length);
+  const count = Math.max(
+    events.length,
+    venues.length,
+    posts.length,
+    couriers.length,
+  );
 
   for (let index = 0; index < count; index += 1) {
     if (events[index]) cards.push(events[index]);
     if (venues[index]) cards.push(venues[index]);
     if (posts[index]) cards.push(posts[index]);
+    if (couriers[index]) cards.push(couriers[index]);
   }
 
   return cards;
@@ -154,11 +209,14 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
   const [events, setEvents] = useState<ApiEvent[]>([]);
   const [venues, setVenues] = useState<ApiVenue[]>([]);
   const [posts, setPosts] = useState<ApiPost[]>([]);
+  const [couriers, setCouriers] = useState<ApiCourierListing[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [retryKey, setRetryKey] = useState(0);
   const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
   const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
+  const [selectedCourier, setSelectedCourier] =
+    useState<ApiCourierListing | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -167,6 +225,8 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
       const includeEvents = selectedCategory === "all" || selectedCategory === "events";
       const includeVenues = selectedCategory === "all" || selectedCategory === "venues";
       const includePosts = selectedCategory === "all" || selectedCategory === "posts";
+      const includeCouriers =
+        selectedCategory === "all" || selectedCategory === "couriers";
 
       void Promise.all([
         includeEvents
@@ -178,11 +238,15 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
         includePosts
           ? fetchPosts({ q: search, signal: controller.signal })
           : Promise.resolve([]),
+        includeCouriers
+          ? fetchCourierListings({ q: search, signal: controller.signal })
+          : Promise.resolve([]),
       ])
-        .then(([eventResults, venueResults, postResults]) => {
+        .then(([eventResults, venueResults, postResults, courierResults]) => {
           setEvents(eventResults);
           setVenues(venueResults);
           setPosts(postResults);
+          setCouriers(courierResults);
           setErrorMessage("");
           setLoadState("ready");
         })
@@ -226,6 +290,15 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
     );
   }
 
+  if (selectedCourier) {
+    return (
+      <CourierDetails
+        courier={selectedCourier}
+        onClose={() => setSelectedCourier(null)}
+      />
+    );
+  }
+
   let columnCount = 2;
   if (width >= 1400) columnCount = 6;
   else if (width >= 1100) columnCount = 5;
@@ -234,6 +307,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
   const eventCards = events.map(eventCard);
   const venueCards = venues.map(venueCard);
   const postCards = posts.map(postCard);
+  const courierCards = couriers.map(courierCard);
   const results =
     selectedCategory === "events"
       ? eventCards
@@ -241,7 +315,9 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
         ? venueCards
         : selectedCategory === "posts"
           ? postCards
-          : combineCards(eventCards, venueCards, postCards);
+          : selectedCategory === "couriers"
+            ? courierCards
+            : combineCards(eventCards, venueCards, postCards, courierCards);
   const columns: SearchCard[][] = Array.from({ length: columnCount }, () => []);
   results.forEach((result, index) => columns[index % columnCount].push(result));
 
@@ -265,6 +341,11 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
 
     if (result.kind === "post") return;
 
+    if (result.kind === "courier") {
+      setSelectedCourier(result.courier);
+      return;
+    }
+
     setQuery(result.venue.name);
     setSelectedCategory("events");
     setLoadState("loading");
@@ -279,7 +360,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
     >
       <Feather name="search" size={20} color={colors.inkMuted} />
       <TextInput
-        placeholder="Search events, venues and posts..."
+        placeholder="Search events, venues, posts and couriers..."
         placeholderTextColor={colors.inkMuted}
         value={query}
         onChangeText={updateQuery}
@@ -404,7 +485,7 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
         <View style={styles.statePanel}>
           <Feather name="search" size={28} color={colors.inkMuted} />
           <Text style={[styles.stateText, { color: colors.inkMuted }]}>
-            No events, venues or posts match your search.
+            No events, venues, posts or couriers match your search.
           </Text>
         </View>
       )}
@@ -452,7 +533,11 @@ export default function SearchPage({ onOpenAuth, onOpenSettings }: SearchPagePro
                                 { color: colors.white, fontFamily: fontFamilies.bodySemi },
                               ]}
                             >
-                              {result.kind === "event" ? "Tickets" : "View events"}
+                              {result.kind === "event"
+                                ? "Tickets"
+                                : result.kind === "courier"
+                                  ? "Track parcel"
+                                  : "View events"}
                             </Text>
                           </View>
                         </View>}

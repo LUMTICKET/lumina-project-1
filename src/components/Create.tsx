@@ -34,6 +34,7 @@ import {
 } from "../api/organizer-events";
 import { fetchVenues, type ApiVenue } from "../api/venues";
 import { useAuth } from "../auth/AuthContext";
+import CourierManagement from "./CourierManagement";
 
 /* ------------------------------------------------------------------ */
 // Types
@@ -139,6 +140,7 @@ export default function Create({
   const [payMethod, setPayMethod] = useState<PaymentMethod>("tnm");
   const [paying, setPaying] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showCourierManagement, setShowCourierManagement] = useState(false);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -510,6 +512,15 @@ export default function Create({
           This account can discover and buy tickets, but only organizer accounts can publish events.
         </Text>
       </View>
+    );
+  }
+
+  if (showCourierManagement && auth.token) {
+    return (
+      <CourierManagement
+        token={auth.token}
+        onClose={() => setShowCourierManagement(false)}
+      />
     );
   }
 
@@ -999,13 +1010,24 @@ export default function Create({
         >
           Create {CATEGORIES[activeIndex].label}
         </Text>
-        <Pressable
-          onPress={() => setShowHistory(true)}
-          style={styles.historyBtn}
-          hitSlop={8}
-        >
-          <Feather name="clock" size={22} color={colors.ink} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            accessibilityLabel="Manage courier operations"
+            onPress={() => setShowCourierManagement(true)}
+            style={styles.historyBtn}
+            hitSlop={8}
+          >
+            <Feather name="truck" size={21} color={colors.ink} />
+          </Pressable>
+          <Pressable
+            accessibilityLabel="View event history"
+            onPress={() => setShowHistory(true)}
+            style={styles.historyBtn}
+            hitSlop={8}
+          >
+            <Feather name="clock" size={22} color={colors.ink} />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -1893,6 +1915,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(1),
   },
   scroll: { flex: 1 },
 

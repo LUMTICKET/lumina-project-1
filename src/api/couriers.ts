@@ -45,6 +45,32 @@ export interface ApiParcelTracking {
   events: ApiTrackingEvent[];
 }
 
+export interface CreateCourierListingInput {
+  name: string;
+  description: string;
+  serviceAreas: string[];
+  serviceLevels: CourierServiceLevel[];
+  basePriceMinor: number;
+  currency: string;
+  estimatedMinHours: number;
+  estimatedMaxHours: number;
+}
+
+export interface CreateParcelInput {
+  origin: string;
+  destination: string;
+  recipientName: string;
+  recipientContact: string;
+  contentsDescription?: string;
+  estimatedDelivery?: string;
+}
+
+export interface CreateTrackingEventInput {
+  status: Exclude<ParcelStatus, "created">;
+  location?: string;
+  message: string;
+}
+
 export function fetchCourierListings({
   q,
   serviceArea,
@@ -64,5 +90,59 @@ export function trackParcel(trackingCode: string, signal?: AbortSignal) {
   return apiRequest<ApiParcelTracking>(
     `/parcels/track/${encodeURIComponent(trackingCode.trim())}`,
     { signal },
+  );
+}
+
+export function fetchOrganizerCourierListings(
+  token: string,
+  signal?: AbortSignal,
+) {
+  return apiRequest<ApiCourierListing[]>("/organizer/courier-listings", {
+    token,
+    signal,
+  });
+}
+
+export function createCourierListing(
+  input: CreateCourierListingInput,
+  token: string,
+) {
+  return apiRequest<ApiCourierListing>("/courier-listings", {
+    method: "POST",
+    body: input,
+    token,
+  });
+}
+
+export function fetchCourierParcels(
+  listingId: string,
+  token: string,
+  signal?: AbortSignal,
+) {
+  return apiRequest<ApiParcelTracking[]>(
+    `/courier-listings/${encodeURIComponent(listingId)}/parcels`,
+    { token, signal },
+  );
+}
+
+export function createCourierParcel(
+  listingId: string,
+  input: CreateParcelInput,
+  token: string,
+) {
+  return apiRequest<ApiParcelTracking>(
+    `/courier-listings/${encodeURIComponent(listingId)}/parcels`,
+    { method: "POST", body: input, token },
+  );
+}
+
+export function addCourierTrackingEvent(
+  parcelId: string,
+  input: CreateTrackingEventInput,
+  token: string,
+) {
+  return apiRequest<ApiParcelTracking>(
+    `/parcels/${encodeURIComponent(parcelId)}/tracking-events`,
+    { method: "POST", body: input, token },
   );
 }

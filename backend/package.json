@@ -11,7 +11,9 @@
     "db:generate": "prisma generate",
     "db:validate": "prisma validate",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "test:integration": "tsx --test --test-concurrency=1 tests/courier-api.integration.test.ts tests/event-post-api.integration.test.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.12.0",

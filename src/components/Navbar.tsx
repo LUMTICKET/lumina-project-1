@@ -20,7 +20,7 @@ interface NavbarProps {
 
 const SIDEBAR_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; label: string }[] = [
   { icon: "home", route: "Home", label: "Home" },
-  { icon: "search", route: "Search", label: "Search" },
+  { icon: "shopping-bag", route: "Search", label: "Buy Tickets" },
   { icon: "plus-square", route: "Create", label: "Create" },
   { icon: "message-circle", route: "Messaging", label: "Messages" },
   { icon: "bell", route: "Feeds", label: "Feeds" },
@@ -28,7 +28,7 @@ const SIDEBAR_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; la
 
 const MOBILE_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; label: string }[] = [
   { icon: "home", route: "Home", label: "Home" },
-  { icon: "search", route: "Search", label: "Search" },
+  { icon: "shopping-bag", route: "Search", label: "Buy" },
   { icon: "plus-circle", route: "Create", label: "Create" },
   { icon: "message-circle", route: "Messaging", label: "Messages" },
   { icon: "bell", route: "Feeds", label: "Feeds" },

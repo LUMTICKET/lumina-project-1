@@ -31,6 +31,10 @@ GET `/api/health`. Public read endpoints are:
 - GET `/api/v1/venues/:venueId`
 - GET `/api/v1/posts` with optional `q`, `cursor`, and `limit`
 - GET `/api/v1/posts/:postId`
+- GET `/api/v1/courier-listings` with optional `q`, `serviceArea`,
+  `cursor`, and `limit`
+- GET `/api/v1/courier-listings/:listingId`
+- GET `/api/v1/parcels/track/:trackingCode`
 
 Authentication endpoints are:
 
@@ -84,6 +88,22 @@ Authenticated feed endpoints are:
 
 Reaction writes are idempotent. Authors cannot report their own posts. Hiding a
 reported post removes it from public feed, detail, and search responses.
+
+Organizer-owned courier workflow endpoints are:
+
+- POST `/api/v1/courier-listings` to publish a courier service
+- PATCH `/api/v1/courier-listings/:listingId` to edit or deactivate an
+  owned listing
+- GET and POST `/api/v1/courier-listings/:listingId/parcels` to list or
+  create shipments for an owned listing
+- POST `/api/v1/parcels/:parcelId/tracking-events` to append a valid status
+  transition
+
+Tracking codes use a high-entropy `LMN-` prefix. Public tracking responses
+contain route, courier, status, estimate, and timeline data; recipient names,
+contacts, parcel contents, and provider contact fields are never returned.
+The deterministic development seed includes `LMN-DEMO-2026` for exercising
+the tracking UI.
 
 List responses expose the next cursor in `meta.nextCursor`. Event detail reads
 only return published events.

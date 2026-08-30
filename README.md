@@ -157,12 +157,13 @@ Each route component uses the theme provider for colors and styles, and several 
 
 The Expo app consumes the Next.js API for event discovery, venue search,
 authentication, organizer-owned event drafts, draft editing, event moderation,
-feed posts, media metadata, reactions, reporting, and post search. Organizers
+feed posts, media metadata, reactions, reporting, post search, courier
+listings, and parcel tracking. Organizers
 can address rejection notes and resubmit; administrators review event
 submissions and reported posts from the Create route. Organizer sessions use
 secure device storage on native platforms and guarded browser storage on web.
-Bus, flight, tourism, courier, and parcel tracking remain staged for backend
-integration.
+Courier results and a privacy-safe parcel timeline are available through
+Search. Bus, flight, and tourism remain staged for backend integration.
 
 
 2. Create a feature branch.

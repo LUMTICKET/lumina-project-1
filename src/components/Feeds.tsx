@@ -1,6 +1,8 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useVideoPlayer, VideoView } from "expo-video";
+import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Platform,
   Pressable,
@@ -13,55 +15,65 @@ import {
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
+import {
+  createPost,
+  fetchPosts,
+  likePost,
+  reportPost,
+  unlikePost,
+  type ApiPost,
+} from "../api/posts";
+import type { AccountType } from "../api/auth";
+import { useAuth } from "../auth/AuthContext";
 
-const POSTS = [
+/*
   {
     id: "p1",
-    company: "Eko Hotel & Suites",
-    avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=800&auto=format&fit=crop",
+    company: "Landlord Entertainment",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 1240,
-    caption: "Detty December kicks off this Friday! Afrobeat Night under the stars with live performances from top artists. Limited VIP tables remaining.",
+    caption: "The Landlord Pakwao Concert is here! Gwamba headlines alongside Nigerian superstar Ruger, with a stacked lineup of Malawi's finest. Don't miss the biggest night of the year at Bingu National Stadium.",
     price: "MWK 15,000",
     date: "Fri, Dec 15",
-    location: "Eko Hotel, Lagos",
-    tags: ["Events", "Afrobeat", "Lagos"],
+    location: "Bingu National Stadium, Lilongwe",
+    tags: ["Concert", "Music", "Lilongwe"],
   },
   {
     id: "p2",
-    company: "ABC Transport Plc",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&auto=format&fit=crop",
+    company: "Malawi Airlines",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop",
+    media: require("@/assets/videos/airline.mp4"),
     isVideo: true,
     likes: 856,
-    caption: "New luxury sleeper buses now on the Lagos–Kano route. Recliner seats, Wi-Fi, charging ports & onboard entertainment. Book your seat today!",
-    price: "MWK 18,500",
+    caption: "Fly non-stop from Lilongwe to Johannesburg. Comfortable seating, complimentary meals & onboard entertainment. Book your seat today!",
+    price: "MWK 350,000",
     date: "Daily Departures",
-    location: "Jibowu Terminal",
-    tags: ["Buses", "Travel", "Comfort"],
+    location: "Kamuzu International Airport",
+    tags: ["Flight", "Travel", "International"],
   },
   {
     id: "p3",
-    company: "SwiftCourier NG",
+    company: "CTS Courier",
     avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&auto=format&fit=crop",
-    isVideo: false,
+    media: require("@/assets/videos/courier_video.mp4"),
+    isVideo: true,
     likes: 2103,
-    caption: "Same-day delivery just got faster. Watch how we move your packages from Lagos to Ibadan in under 4 hours. Real-time tracking included.",
-    price: "MWK 2,500",
-    date: "Mon–Sat",
-    location: "Nationwide",
+    caption: "Same-day delivery just got faster. Watch how we move your packages across Blantyre in under a day. 24-hour service now available at our main branches nationwide.",
+    price: "MWK 17,000",
+    date: "Mon–Sun, 24/7",
+    location: "Nationwide, Malawi",
     tags: ["Courier", "Fast", "Logistics"],
   },
   {
     id: "p4",
     company: "Night Garden Fest",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 5602,
-    caption: "Flashback to the most magical night of 2025. Early bird tickets for 2026 are now live. Don’t miss the garden lights, live bands & food trucks.",
+    caption: "Flashback to the most magical night of 2025. Early bird tickets for 2026 are now live. Don't miss the garden lights, live bands & food trucks.",
     price: "MWK 10,000",
     date: "Mar 8–10, 2026",
     location: "Lekki Conservation Centre",
@@ -74,7 +86,7 @@ const POSTS = [
     media: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&auto=format&fit=crop",
     isVideo: false,
     likes: 432,
-    caption: "Corporate teams, this one’s for you. Monthly shuttle passes with dedicated pick-up routes. Stress-free commute for your staff.",
+    caption: "Corporate teams, this one's for you. Monthly shuttle passes with dedicated pick-up routes. Stress-free commute for your staff.",
     price: "MWK 45,000/mo",
     date: "Monthly Subscription",
     location: "Lagos Metropolis",
@@ -84,7 +96,7 @@ const POSTS = [
     id: "p6",
     company: "Burna Boy Live",
     avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1459749411177-047381bb3ece?w=800&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 12890,
     caption: "The African Giant returns home. VIP tickets restocked for 48 hours only. Witness history at the biggest concert of the year.",
@@ -110,7 +122,7 @@ const POSTS = [
     id: "p8",
     company: "Coastal Express",
     avatar: "https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=200&auto=format&fit=crop",
-    media: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&auto=format&fit=crop",
+    media: require("@/assets/videos/gwamba_show.mp4"),
     isVideo: true,
     likes: 678,
     caption: "Scenic coastal route from Lekki to Epe. Ocean views, air-conditioned coaches, and weekend getaway packages now available.",
@@ -119,13 +131,107 @@ const POSTS = [
     location: "Lekki–Epe Expressway",
     tags: ["Scenic", "Weekend", "Bus"],
   },
-];
+*/
 
-function PostCard({ post }: { post: typeof POSTS[number] }) {
+/* ------------------------------------------------------------------ */
+// Video player
+/* ------------------------------------------------------------------ */
+function VideoPost({ source, isMuted }: { source: any; isMuted: boolean }) {
+  const [isReady, setIsReady] = useState(false);
+
+  const player = useVideoPlayer(source, (player) => {
+    player.loop = true;
+  });
+
+  /* eslint-disable react-hooks/immutability -- expo-video exposes muting as a mutable player property. */
+  useEffect(() => {
+    if (player) player.muted = isMuted;
+  }, [isMuted, player]);
+  /* eslint-enable react-hooks/immutability */
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      const uri = typeof source === "string" ? source : source?.uri;
+      if (uri) fetch(uri).catch(() => {});
+    }
+  }, [source]);
+
+  /* eslint-disable react-hooks/set-state-in-effect -- readiness is synchronized from the external player. */
+  useEffect(() => {
+    if (!player) return;
+
+    if (player.status === "readyToPlay") {
+      setIsReady(true);
+      if (!player.playing) player.play();
+      return;
+    }
+
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    const handleStatusChange = ({ status }: { status: string }) => {
+      if (status === "readyToPlay" || status === "playing") {
+        setIsReady(true);
+        if (!player.playing) player.play();
+      }
+    };
+
+    if (typeof player.addListener === "function") {
+      const sub = player.addListener("statusChange", handleStatusChange);
+      return () => sub?.remove?.();
+    }
+
+    interval = setInterval(() => {
+      if (player.status === "readyToPlay") {
+        setIsReady(true);
+        if (!player.playing) player.play();
+        if (interval) clearInterval(interval);
+      }
+    }, 300);
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [player]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  return (
+    <View style={StyleSheet.absoluteFill}>
+      <VideoView
+        style={StyleSheet.absoluteFill}
+        player={player}
+        contentFit="cover"
+        nativeControls={false}
+        fullscreenOptions={{ enable: false }}
+      />
+      {!isReady && (
+        <View style={[StyleSheet.absoluteFill, styles.videoLoading]}>
+          <ActivityIndicator color="#fff" />
+        </View>
+      )}
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+// Post card
+/* ------------------------------------------------------------------ */
+function PostCard({
+  post,
+  onToggleLike,
+  onReport,
+}: {
+  post: ApiPost;
+  onToggleLike: (post: ApiPost) => void;
+  onReport: (post: ApiPost) => void;
+}) {
   const { colors } = useLumTheme();
-  const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [isMuted, setIsMuted] = useState(true);
+  const [showReport, setShowReport] = useState(false);
+
+  const primaryMedia = post.media[0];
+  const mediaSource = { uri: primaryMedia.url };
 
   return (
     <View
@@ -141,7 +247,13 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Image source={{ uri: post.avatar }} style={styles.avatar} />
+          {post.author.avatarUrl ? (
+            <Image source={{ uri: post.author.avatarUrl }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: colors.bgAlt }]}>
+              <Feather name="user" size={18} color={colors.inkMuted} />
+            </View>
+          )}
           <View>
             <Text
               style={[
@@ -149,7 +261,7 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
                 { color: colors.ink, fontFamily: fontFamilies.bodySemi },
               ]}
             >
-              {post.company}
+              {post.author.name}
             </Text>
             <Text
               style={[
@@ -157,44 +269,63 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
                 { color: colors.inkMuted, fontFamily: fontFamilies.body },
               ]}
             >
-              {post.location}
+              {post.location ?? "Malawi"}
             </Text>
           </View>
         </View>
-        <Pressable>
+        <Pressable onPress={() => setShowReport((current) => !current)}>
           <Feather name="more-horizontal" size={20} color={colors.inkMuted} />
         </Pressable>
       </View>
+      {showReport && (
+        <Pressable
+          onPress={() => {
+            onReport(post);
+            setShowReport(false);
+          }}
+          style={[styles.reportAction, { borderColor: colors.border }]}
+        >
+          <Feather name="flag" size={15} color="#DC2626" />
+          <Text style={{ color: "#DC2626", fontFamily: fontFamilies.bodySemi }}>
+            Report misleading content
+          </Text>
+        </Pressable>
+      )}
 
       {/* Media */}
       <View style={styles.mediaWrap}>
-        <Image
-          source={{ uri: post.media }}
-          style={styles.media}
-          resizeMode="cover"
-        />
-        {post.isVideo && (
-          <View style={styles.playOverlay}>
-            <View
-              style={[
-                styles.playBtn,
-                { backgroundColor: colors.black + "AA" },
-              ]}
-            >
-              <Feather name="play" size={28} color={colors.white} />
-            </View>
-          </View>
+        {primaryMedia.type === "video" ? (
+          <VideoPost source={mediaSource} isMuted={isMuted} />
+        ) : (
+          <Image
+            source={mediaSource}
+            style={styles.media}
+            resizeMode="cover"
+          />
+        )}
+
+        {primaryMedia.type === "video" && (
+          <Pressable
+            style={[styles.muteBtn, { backgroundColor: colors.black + "AA" }]}
+            onPress={() => setIsMuted(!isMuted)}
+          >
+            <Feather
+              name={isMuted ? "volume-x" : "volume-2"}
+              size={18}
+              color={colors.white}
+            />
+          </Pressable>
         )}
       </View>
 
       {/* Action Bar */}
       <View style={styles.actionBar}>
         <View style={styles.actionLeft}>
-          <Pressable onPress={() => setLiked(!liked)} style={styles.actionBtn}>
+          <Pressable onPress={() => onToggleLike(post)} style={styles.actionBtn}>
             <Feather
-              name={liked ? "heart" : "heart"}
+              name="heart"
               size={24}
-              color={liked ? "#E60023" : colors.ink}
+              color={post.viewerHasReacted ? "#E60023" : colors.ink}
             />
           </Pressable>
           <Pressable style={styles.actionBtn}>
@@ -221,7 +352,7 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
             { color: colors.ink, fontFamily: fontFamilies.bodySemi },
           ]}
         >
-          {post.likes.toLocaleString()} likes
+          {post.reactionCount.toLocaleString()} likes
         </Text>
       </View>
 
@@ -234,7 +365,7 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
               { color: colors.ink, fontFamily: fontFamilies.bodySemi },
             ]}
           >
-            {post.company}{" "}
+            {post.author.name}{" "}
           </Text>
           <Text
             style={[
@@ -261,13 +392,8 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
       </View>
 
       {/* Ticket Info Chips */}
-      <View style={styles.chipRow}>
-        <View
-          style={[
-            styles.chip,
-            { backgroundColor: colors.gold + "18" },
-          ]}
-        >
+      {(post.priceLabel || post.dateLabel) && <View style={styles.chipRow}>
+        {!!post.priceLabel && <View style={[styles.chip, { backgroundColor: colors.gold + "18" }]}>
           <Feather name="tag" size={12} color={colors.gold} />
           <Text
             style={[
@@ -275,15 +401,10 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
               { color: colors.gold, fontFamily: fontFamilies.bodySemi },
             ]}
           >
-            {post.price}
+            {post.priceLabel}
           </Text>
-        </View>
-        <View
-          style={[
-            styles.chip,
-            { backgroundColor: colors.bgAlt },
-          ]}
-        >
+        </View>}
+        {!!post.dateLabel && <View style={[styles.chip, { backgroundColor: colors.bgAlt }]}>
           <Feather name="calendar" size={12} color={colors.inkMuted} />
           <Text
             style={[
@@ -291,10 +412,10 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
               { color: colors.inkMuted, fontFamily: fontFamilies.body },
             ]}
           >
-            {post.date}
+            {post.dateLabel}
           </Text>
-        </View>
-      </View>
+        </View>}
+      </View>}
 
       {/* Tags */}
       <View style={styles.tagRow}>
@@ -312,12 +433,7 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
       </View>
 
       {/* CTA */}
-      <Pressable
-        style={[
-          styles.ctaBtn,
-          { backgroundColor: colors.gold },
-        ]}
-      >
+      {!!post.event && <Pressable style={[styles.ctaBtn, { backgroundColor: colors.gold }]}>
         <Feather name="tag" size={16} color={colors.white} />
         <Text
           style={[
@@ -327,33 +443,124 @@ function PostCard({ post }: { post: typeof POSTS[number] }) {
         >
           Get Tickets
         </Text>
-      </Pressable>
+      </Pressable>}
     </View>
   );
 }
 
-export default function Feeds() {
+/* ------------------------------------------------------------------ */
+// Main screen
+/* ------------------------------------------------------------------ */
+export default function Feeds({
+  onOpenAuth,
+}: {
+  onOpenAuth?: (accountType?: AccountType) => void;
+}) {
   const { colors } = useLumTheme();
+  const auth = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
   const [query, setQuery] = useState("");
+  const [posts, setPosts] = useState<ApiPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [notice, setNotice] = useState("");
+  const [showComposer, setShowComposer] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [posting, setPosting] = useState(false);
 
-  const filteredPosts = POSTS.filter((post) => {
-    const haystack = [
-      post.company,
-      post.caption,
-      post.location,
-      post.date,
-      ...post.tags,
-    ]
-      .join(" ")
-      .toLowerCase();
+  useEffect(() => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => {
+      setLoading(true);
+      void fetchPosts({
+        q: query.trim() || undefined,
+        token: auth.token,
+        signal: controller.signal,
+      })
+        .then((items) => {
+          setPosts(items);
+          setErrorMessage("");
+        })
+        .catch((error) => {
+          if (!controller.signal.aborted) {
+            setErrorMessage(error instanceof Error ? error.message : "Posts could not be loaded.");
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoading(false);
+        });
+    }, 300);
+    return () => {
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [auth.token, query]);
 
-    return haystack.includes(query.toLowerCase());
-  });
+  const openComposer = () => {
+    if (!auth.token) {
+      onOpenAuth?.();
+      return;
+    }
+    setShowComposer((current) => !current);
+  };
+
+  const submitPost = async () => {
+    if (!auth.token || !caption.trim() || !mediaUrl.trim()) return;
+    setPosting(true);
+    setErrorMessage("");
+    try {
+      const post = await createPost(
+        {
+          caption: caption.trim(),
+          tags: [],
+          media: [{ type: "image", url: mediaUrl.trim() }],
+        },
+        auth.token,
+      );
+      setPosts((current) => [post, ...current]);
+      setCaption("");
+      setMediaUrl("");
+      setShowComposer(false);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "The post could not be created.");
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const toggleLike = async (post: ApiPost) => {
+    if (!auth.token) {
+      onOpenAuth?.();
+      return;
+    }
+    try {
+      const updated = post.viewerHasReacted
+        ? await unlikePost(post.id, auth.token)
+        : await likePost(post.id, auth.token);
+      setPosts((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "The reaction could not be saved.");
+    }
+  };
+
+  const report = async (post: ApiPost) => {
+    if (!auth.token) {
+      onOpenAuth?.();
+      return;
+    }
+    try {
+      await reportPost(post.id, { reason: "misleading" }, auth.token);
+      setNotice("Report submitted for review.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "The report could not be submitted.");
+    }
+  };
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
+      {/* Search header */}
       <View
         style={[
           styles.searchWrap,
@@ -371,41 +578,167 @@ export default function Feeds() {
           },
         ]}
       >
+        {/* Mobile: plain plus icon above search, RIGHT aligned */}
+        {!isDesktop && (
+          <View style={styles.mobileTopRow}>
+            <Pressable onPress={openComposer} style={styles.plusBtnMobile}>
+              <Feather name="plus" size={24} color={colors.ink} />
+            </Pressable>
+          </View>
+        )}
+
+        {/* Desktop: search + plus icon in one row */}
+        {isDesktop ? (
+          <View style={styles.desktopSearchRow}>
+            <View
+              style={[
+                styles.searchBar,
+                {
+                  backgroundColor: colors.bgAlt,
+                  borderColor: colors.border,
+                  flex: 1,
+                },
+              ]}
+            >
+              <Feather name="search" size={20} color={colors.inkMuted} />
+              <TextInput
+                placeholder="Search feeds"
+                placeholderTextColor={colors.inkMuted}
+                value={query}
+                onChangeText={setQuery}
+                style={[
+                  styles.searchInput,
+                  {
+                    color: colors.ink,
+                    fontFamily: fontFamilies.body,
+                  },
+                ]}
+              />
+              {query.length > 0 && (
+                <Pressable onPress={() => setQuery("")}>
+                  <Feather name="x" size={20} color={colors.inkMuted} />
+                </Pressable>
+              )}
+            </View>
+
+            <Pressable onPress={openComposer} style={styles.plusBtnDesktop}>
+              <Feather name="plus" size={24} color={colors.ink} />
+            </Pressable>
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.searchBar,
+              {
+                backgroundColor: colors.bgAlt,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Feather name="search" size={20} color={colors.inkMuted} />
+            <TextInput
+              placeholder="Search feeds"
+              placeholderTextColor={colors.inkMuted}
+              value={query}
+              onChangeText={setQuery}
+              style={[
+                styles.searchInput,
+                {
+                  color: colors.ink,
+                  fontFamily: fontFamilies.body,
+                },
+              ]}
+            />
+            {query.length > 0 && (
+              <Pressable onPress={() => setQuery("")}>
+                <Feather name="x" size={20} color={colors.inkMuted} />
+              </Pressable>
+            )}
+          </View>
+        )}
+      </View>
+
+      {showComposer && (
         <View
           style={[
-            styles.searchBar,
+            styles.composer,
             {
-              backgroundColor: colors.bgAlt,
+              backgroundColor: colors.surface,
               borderColor: colors.border,
-            },
-            isDesktop && {
-              maxWidth: 480,
-              alignSelf: "center",
-              width: "100%",
+              maxWidth: isDesktop ? 560 : undefined,
             },
           ]}
         >
-          <Feather name="search" size={18} color={colors.inkMuted} />
+          <Text style={[styles.composerTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>
+            Create a post
+          </Text>
           <TextInput
-            placeholder="Search feeds"
+            multiline
+            placeholder="What would you like to share?"
             placeholderTextColor={colors.inkMuted}
-            value={query}
-            onChangeText={setQuery}
+            value={caption}
+            onChangeText={setCaption}
             style={[
-              styles.searchInput,
+              styles.composerInput,
               {
                 color: colors.ink,
+                backgroundColor: colors.bg,
+                borderColor: colors.border,
                 fontFamily: fontFamilies.body,
               },
             ]}
           />
-          {query.length > 0 && (
-            <Pressable onPress={() => setQuery("")}>
-              <Feather name="x" size={18} color={colors.inkMuted} />
-            </Pressable>
-          )}
+          <TextInput
+            autoCapitalize="none"
+            keyboardType="url"
+            placeholder="Image URL"
+            placeholderTextColor={colors.inkMuted}
+            value={mediaUrl}
+            onChangeText={setMediaUrl}
+            style={[
+              styles.mediaUrlInput,
+              {
+                color: colors.ink,
+                backgroundColor: colors.bg,
+                borderColor: colors.border,
+                fontFamily: fontFamilies.body,
+              },
+            ]}
+          />
+          <Pressable
+            disabled={posting || !caption.trim() || !mediaUrl.trim()}
+            onPress={() => void submitPost()}
+            style={[
+              styles.composerSubmit,
+              {
+                backgroundColor: colors.gold,
+                opacity: posting || !caption.trim() || !mediaUrl.trim() ? 0.55 : 1,
+              },
+            ]}
+          >
+            {posting ? (
+              <ActivityIndicator color={colors.white} />
+            ) : (
+              <Text style={{ color: colors.white, fontFamily: fontFamilies.bodySemi }}>
+                Publish Post
+              </Text>
+            )}
+          </Pressable>
         </View>
-      </View>
+      )}
+
+      {!!notice && (
+        <Pressable onPress={() => setNotice("")}>
+          <Text style={[styles.noticeText, { color: "#059669", fontFamily: fontFamilies.body }]}>
+            {notice}
+          </Text>
+        </Pressable>
+      )}
+      {!!errorMessage && (
+        <Text style={[styles.noticeText, { color: "#DC2626", fontFamily: fontFamilies.body }]}>
+          {errorMessage}
+        </Text>
+      )}
 
       <ScrollView
         style={styles.scroll}
@@ -419,7 +752,20 @@ export default function Feeds() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {filteredPosts.map((post) => (
+        {loading && posts.length === 0 && (
+          <View style={styles.statePanel}>
+            <ActivityIndicator color={colors.gold} size="large" />
+          </View>
+        )}
+        {!loading && posts.length === 0 && (
+          <View style={styles.statePanel}>
+            <Feather name="inbox" size={30} color={colors.inkMuted} />
+            <Text style={{ color: colors.inkMuted, fontFamily: fontFamilies.body }}>
+              No posts match your search.
+            </Text>
+          </View>
+        )}
+        {posts.map((post) => (
           <View
             key={post.id}
             style={[
@@ -434,7 +780,11 @@ export default function Feeds() {
               },
             ]}
           >
-            <PostCard post={post} />
+            <PostCard
+              post={post}
+              onToggleLike={(item) => void toggleLike(item)}
+              onReport={(item) => void report(item)}
+            />
           </View>
         ))}
       </ScrollView>
@@ -442,28 +792,112 @@ export default function Feeds() {
   );
 }
 
+/* ------------------------------------------------------------------ */
+// Styles
+/* ------------------------------------------------------------------ */
 const styles = StyleSheet.create({
   wrap: {
     flex: 1,
     width: "100%",
+    position: "relative",
   },
   searchWrap: {
-    paddingHorizontal: spacing(3),
+    paddingHorizontal: spacing(4),
     paddingVertical: spacing(2),
     borderBottomWidth: 1,
+    marginTop: Platform.OS === "web" ? 0 : 40,
   },
-  searchBar: {
+  mobileTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: spacing(2),
+  },
+  plusBtnMobile: {
+    padding: spacing(1),
+  },
+  desktopSearchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(3),
+    maxWidth: 560,
+    alignSelf: "center",
+    width: "100%",
+  },
+  plusBtnDesktop: {
+    padding: spacing(1.5),
+  },
+  composer: {
+    width: "100%",
+    alignSelf: "center",
+    borderWidth: 1,
+    borderRadius: radii.xl,
+    padding: spacing(4),
+    gap: spacing(3),
+    marginVertical: spacing(3),
+  },
+  composerTitle: { fontSize: 19 },
+  composerInput: {
+    minHeight: 110,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing(3),
+    textAlignVertical: "top",
+  },
+  mediaUrlInput: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing(3),
+  },
+  composerSubmit: {
+    alignSelf: "flex-end",
+    borderRadius: radii.full,
+    paddingHorizontal: spacing(5),
+    paddingVertical: spacing(3),
+    minWidth: 140,
+    alignItems: "center",
+  },
+  noticeText: {
+    maxWidth: 560,
+    width: "100%",
+    alignSelf: "center",
+    paddingHorizontal: spacing(4),
+    paddingVertical: spacing(2),
+    textAlign: "center",
+  },
+  statePanel: {
+    minHeight: 260,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing(3),
+  },
+  avatarFallback: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportAction: {
+    marginHorizontal: spacing(4),
+    marginBottom: spacing(2),
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    padding: spacing(3),
     flexDirection: "row",
     alignItems: "center",
     gap: spacing(2),
-    borderWidth: 1,
+  },
+  searchBar: {
+    width: "100%",
+    height: 50,
     borderRadius: radii.full,
-    paddingHorizontal: spacing(3),
-    paddingVertical: spacing(2),
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing(4),
+    gap: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
   },
   scroll: {
     flex: 1,
@@ -511,27 +945,27 @@ const styles = StyleSheet.create({
     position: "relative",
     width: "100%",
     aspectRatio: 1,
+    overflow: "hidden",
+    backgroundColor: "#000",
   },
   media: {
     width: "100%",
     height: "100%",
   },
-  playOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  videoLoading: {
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "center",
     alignItems: "center",
   },
-  playBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  muteBtn: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
-    paddingLeft: 4,
   },
   actionBar: {
     flexDirection: "row",

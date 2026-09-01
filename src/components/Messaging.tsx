@@ -1,14 +1,15 @@
 import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
-    Image,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    useWindowDimensions,
-    View,
+  Image,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
@@ -85,7 +86,7 @@ export default function Messaging() {
         style={[
           styles.header,
           {
-            backgroundColor: colors.bgAlt,
+            backgroundColor: colors.bg,
             borderBottomColor: colors.border,
           },
         ]}
@@ -99,7 +100,7 @@ export default function Messaging() {
           Messages
         </Text>
         <Pressable style={[styles.newBtn, { backgroundColor: colors.gold }]}>
-          <Feather name="edit-2" size={18} color={colors.white} />
+          <Feather name="edit-2" size={20} color={colors.white} />
         </Pressable>
       </View>
 
@@ -108,13 +109,18 @@ export default function Messaging() {
         style={[
           styles.searchWrap,
           {
-            backgroundColor: colors.bgAlt,
+            backgroundColor: colors.bg,
             borderBottomColor: colors.border,
           },
         ]}
       >
-        <View style={[styles.searchBar, { backgroundColor: colors.bgAlt }]}>
-          <Feather name="search" size={18} color={colors.inkMuted} />
+        <View
+          style={[
+            styles.searchBar,
+            { backgroundColor: colors.bgAlt, borderColor: colors.border },
+          ]}
+        >
+          <Feather name="search" size={20} color={colors.inkMuted} />
           <TextInput
             placeholder="Search messages"
             placeholderTextColor={colors.inkMuted}
@@ -125,6 +131,11 @@ export default function Messaging() {
               { color: colors.ink, fontFamily: fontFamilies.body },
             ]}
           />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch("")}>
+              <Feather name="x" size={20} color={colors.inkMuted} />
+            </Pressable>
+          )}
         </View>
       </View>
 
@@ -132,7 +143,7 @@ export default function Messaging() {
       <ScrollView
         style={styles.list}
         contentContainerStyle={{
-          paddingHorizontal: isDesktop ? spacing(6) : spacing(3),
+          paddingHorizontal: isDesktop ? spacing(6) : spacing(4),
           paddingTop: spacing(3),
           paddingBottom: isDesktop ? spacing(10) : spacing(20),
         }}
@@ -204,28 +215,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: spacing(6),
+    paddingHorizontal: spacing(4),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
+    marginTop: Platform.OS === "web" ? 0 : 40,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
   },
   newBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radii.full,
     alignItems: "center",
     justifyContent: "center",
   },
   searchWrap: {
-    paddingHorizontal: spacing(6),
+    paddingHorizontal: spacing(4),
     paddingVertical: spacing(3),
     borderBottomWidth: 1,
   },
   searchBar: {
-    height: 44,
+    width: "100%",
+    height: 50,
     borderRadius: radii.full,
     flexDirection: "row",
     alignItems: "center",
@@ -234,8 +247,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 15,
-    height: "100%",
+    fontSize: 16,
   },
   list: {
     flex: 1,

@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: true
+  EXPO_NO_TELEMETRY: 1
+  NODE_VERSION: 22.13.1
+
+jobs:
+  validate:
+    name: Validate applications
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: lumina
+          POSTGRES_USER: lumina
+          POSTGRES_PASSWORD: lumina
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lumina -d lumina"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci --prefix backend
+
+      # Keep compatibility drift visible while the existing SDK 57 package
+      # mismatches are addressed in a dedicated dependency update.
+      - name: Check Expo dependency compatibility (advisory)
+        continue-on-error: true
+        run: npx --no-install expo install --check
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Export web app
+        run: npm run build:web
+
+      - name: Validate backend database schema
+        run: npm run db:validate --prefix backend
+        env:
+          DATABASE_URL: postgresql://lumina:lumina@localhost:5432/lumina?schema=public
+
+      - name: Generate backend database client
+        run: npm run db:generate --prefix backend
+        env:
+          DATABASE_URL: postgresql://lumina:lumina@localhost:5432/lumina?schema=public
+
+      - name: Type-check backend
+        run: npm run typecheck --prefix backend
+
+      - name: Lint backend
+        run: npm run lint --prefix backend
+
+      - name: Build backend
+        run: npm run build --prefix backend
+
+      - name: Apply backend migrations
+        run: npm run db:migrate:deploy --prefix backend
+        env:
+          DATABASE_URL: postgresql://lumina:lumina@localhost:5432/lumina?schema=public
+
+      - name: Test backend integration contracts
+        run: npm run test:integration --prefix backend
+        env:
+          DATABASE_URL: postgresql://lumina:lumina@localhost:5432/lumina?schema=public

@@ -1,203 +1,172 @@
-# 🚀 LumTicket
+# 🚀 Lumina Project
 
-> A digital transport, logistics, and ticketing platform developed by **Lumina Holdings Ltd**.
+> A cross-platform Expo application for transport, ticketing, delivery, and event discovery.
 
-LumTicket is a cross-platform application built using **Expo** for Android, iOS, and Web, with a **Next.js API backend** that powers authentication, business logic, payment integrations, and data management.
-
----
-
-# 🏗 System Architecture
-
-```
-Expo (Android • iOS • Web)
-            │
-      HTTPS / REST API
-            │
-      Next.js Backend API
-            │
-        Prisma ORM
-            │
-       PostgreSQL
-```
-
----
-
-# 🛠 Tech Stack
-
-## Frontend
-
-- Expo
-- React Native
-- Expo Router
-- TypeScript
-- React Native Paper
-- React Hook Form
-- Zustand / Context API
-
-The Expo application supports:
+This repository contains the front-end app built with **Expo Router**, **React Native**, and **TypeScript**. The app is designed to run on:
 
 - 📱 Android
 - 🍎 iOS
 - 🌐 Web
 
-using a single codebase.
+All screens and navigation are provided from a single shared codebase.
 
 ---
 
-## Backend
+# 🔍 App Overview
 
-The backend is developed using:
+The app is structured around a landing page that switches between six main sections:
 
-- Next.js
-- Next.js Route Handlers
-- TypeScript
-- Prisma ORM
-- PostgreSQL
+- **Home** — grid-driven discovery of events, routes, and ticketed services.
+- **Search** — search live event, venue, and feed-post results.
+- **Create** — authenticated organizer workflow for event drafts and moderation submission.
+- **Messaging** — chat-style interface for conversations and inquiries.
+- **Feeds** — API-backed media posts, creation, likes, reporting, and ticket CTAs.
+- **Settings** — user and business settings, access controls, billing options, and plan upgrades.
 
-Responsibilities include:
+Additional UI features include:
 
-- Authentication
-- Authorization
-- API Services
-- Business Logic
-- Database Management
-- Payment Integrations
-- Notifications
+- centralized theme support via `src/theme/ThemeContext.tsx`
+- a responsive navbar that adapts to desktop and mobile layouts
+- an authentication modal component (`AuthModal`) for sign-in or profile actions
+- visually rich cards, image/video content, and filter categories
+
+---
+
+# 🧱 Tech Stack
+
+- **Expo** `~57.0.8`
+- **React Native** `0.86.0`
+- **Expo Router** `~57.0.8`
+- **TypeScript** `~6.0.3`
+- **React** `19.2.3`
+- **Expo vector icons**
+- **Async Storage**
+- **Video playback** with `expo-video`
+- **Next.js** API backend
+- **PostgreSQL** with Prisma ORM
+- **Zod** API contract validation
 
 ---
 
 # 📁 Project Structure
 
 ```
-lumticket/
-
-├── app/                 # Expo Router pages
-├── assets/
-├── components/
-├── hooks/
-├── services/
-├── utils/
-├── constants/
-├── context/
-├── types/
-├── backend/             # Next.js API
-│   ├── app/
-│   ├── prisma/
-│   ├── lib/
-│   ├── middleware.ts
-│   └── package.json
-│
-├── README.md
-└── package.json
+lumina-project-1/
+├── app/                     # Expo Router root and pages
+│   ├── _layout.tsx          # Root layout, theme provider
+│   └── index.tsx            # Landing page and route switching
+├── assets/                  # Images, icons, videos
+├── src/
+│   ├── components/          # Screen and UI components
+│   ├── hooks/               # Custom hooks
+│   └── theme/               # Theme provider and design tokens
+├── backend/                 # API-only Next.js application
+│   ├── src/app/             # Route Handlers
+│   ├── src/contracts/       # Validated API contracts
+│   └── prisma/              # PostgreSQL data model
+├── package.json             # Expo app configuration
+├── tsconfig.json            # TypeScript config
+├── app.json                 # Expo app manifest
+├── global.css               # Web global styles
+└── README.md                # Project documentation
 ```
 
 ---
 
-# 🚀 Getting Started
+# 🚀 Running the App
 
-## Clone Repository
-
-```bash
-git clone https://github.com/LuminaHoldings/LumTicket.git
-```
-
-```
-cd LumTicket
-```
-
----
-
-# Install Frontend Dependencies
+Install dependencies:
 
 ```bash
 npm install
 ```
 
----
-
-# Start Expo
+Start Expo:
 
 ```bash
-npx expo start
+npm run start
 ```
 
-Run on Android
+The Events Tickets and Search screens read from the local API. Copy `.env.example` to
+`.env`, then start PostgreSQL and the backend in separate terminals:
+
+```bash
+docker compose -f backend/compose.yaml up -d
+cd backend
+npx prisma migrate deploy
+npm run db:seed
+npm run dev
+```
+
+`EXPO_PUBLIC_API_URL` defaults to `http://localhost:3000/api/v1` for web and
+simulators. For a physical phone, set it to your computer's LAN address, such
+as `http://192.168.1.20:3000/api/v1`, before starting Expo.
+
+Open in one of the target environments:
 
 ```bash
 npm run android
-```
-
-Run on iOS
-
-```bash
 npm run ios
-```
-
-Run on Web
-
-```bash
 npm run web
 ```
 
 ---
 
-# Backend Setup
+# 🧪 Useful Scripts
 
-Navigate to the backend directory.
-
-```bash
-cd backend
-```
-
-Install dependencies.
-
-```bash
-npm install
-```
-
-Configure your `.env` file.
-
-```env
-DATABASE_URL=
-
-JWT_SECRET=
-
-NEXTAUTH_SECRET=
-
-NEXTAUTH_URL=
-
-MPAMBA_API_KEY=
-
-AIRTEL_MONEY_API_KEY=
-```
-
-Generate the Prisma Client.
-
-```bash
-npx prisma generate
-```
-
-Run database migrations.
-
-```bash
-npx prisma migrate dev
-```
-
-Start the backend server.
-
-```bash
-npm run dev
-```
+- `npm run start` — start Expo development server
+- `npm run android` — launch on Android emulator/device
+- `npm run ios` — launch on iOS simulator/device
+- `npm run web` — launch in the browser
+- `npm run lint` — run Expo lint checks
+- `npm run build:web` — export the web build
+- `npm run reset-project` — reset project state via `scripts/reset-project.js`
 
 ---
 
-# Development Workflow
+# 📝 Notes
 
-1. Pull the latest changes.
+- The workspace contains the Expo front end and an API-only Next.js backend.
+- Backend setup and validation commands are documented in backend/README.md.
+- Navigation and screen layout are defined in `src/app/index.tsx` and the component files under `src/components/`.
+- `src/theme/ThemeContext.tsx` supplies colors and theme state across the app.
 
-```bash
-git pull
-```
+---
+
+# 📌 Key Screens and Components
+
+- `src/app/index.tsx` — top-level landing page and route switcher
+- `src/app/_layout.tsx` — root layout with the theme provider
+- `src/components/Navbar.tsx` — responsive sidebar / bottom nav
+- `src/components/HomePage.tsx` — discovery grid and search bar
+- `src/components/SearchPage.tsx` — filterable search results
+- `src/components/Feeds.tsx` — social media-style feed with videos
+- `src/components/Settings.tsx` — settings and toggles
+- `src/components/AuthModal.tsx` — modal authentication UI
+
+---
+
+# 💡 How the App Works
+
+The app loads a single landing page and renders one of the route components based on current navigation state. The navbar is responsive:
+
+- desktop: fixed vertical sidebar
+- mobile: fixed bottom tab bar
+
+Each route component uses the theme provider for colors and styles, and several screens implement responsive column layouts depending on screen width.
+
+The Expo app consumes the Next.js API for event discovery, venue search,
+authentication, organizer-owned event drafts, draft editing, event moderation,
+feed posts, media metadata, reactions, reporting, post search, courier
+listings, and parcel tracking. Organizers
+can address rejection notes and resubmit; administrators review event
+submissions and reported posts from the Create route. Organizer sessions use
+secure device storage on native platforms and guarded browser storage on web.
+Courier results and a privacy-safe parcel timeline are available through
+Search. Organizers can open courier operations from Create to register
+services and parcels and append valid tracking updates. Bus, flight, and
+tourism remain staged for backend integration.
+
 
 2. Create a feature branch.
 

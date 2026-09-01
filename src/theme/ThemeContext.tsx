@@ -25,10 +25,12 @@ export function LumThemeProvider({ children }: { children: React.ReactNode }) {
     system === "dark" || system === "light" ? system : resolveSystemMode()
   );
 
+  /* eslint-disable react-hooks/set-state-in-effect -- synchronize with the native appearance subscription. */
   useEffect(() => {
     const next = system === "dark" || system === "light" ? system : resolveSystemMode();
     setModeState(next);
   }, [system]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const setMode = (next: ThemeMode) => {
     setModeState(next);
@@ -38,6 +40,8 @@ export function LumThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<ThemeContextValue>(
     () => ({ mode, colors: getColors(mode), toggle, setMode }),
+    // The callbacks intentionally close over the current mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [mode]
   );
 

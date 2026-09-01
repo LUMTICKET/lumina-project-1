@@ -1,7 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  Image,
   Platform,
   Pressable,
   ScrollView,
@@ -11,153 +10,106 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useAuth } from "../auth/AuthContext";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 
+import BusTickets from "./BusTickets";
+import EventsTickets from "./EventsTickets";
+import FlightTickets from "./FlightTickets";
+import PaymentPage from "./PaymentPage";
+import TicketConfigPage, { PurchasePayload, TicketConfig } from "./TicketConfigPage";
+import TourismTickets from "./TourismTickets";
+
 const CATEGORIES = [
-  "All",
-  "Events",
-  "Travel",
-  "Food",
-  "DIY",
-  "Home",
-  "Fashion",
-  "Art",
-  "Quotes",
-  "Music",
-  "Fitness",
-  "Tech",
+  "Bus Tickets",
+  "Events Tickets",
+  "Tourism Tickets",
+  "Flight Tickets",
 ];
 
-const PINS = [
-  {
-    id: "1",
-    title: "Night Garden Fest",
-    subtitle: "Flashback event coverage",
-    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&auto=format&fit=crop",
-    height: 320,
-  },
-  {
-    id: "2",
-    title: "Airport Express",
-    subtitle: "Coach and bus booking",
-    image: "https://images.unsplash.com/photo-1514565131-fce0801e5785?q=80&w=600&auto=format&fit=crop",
-    height: 240,
-  },
-  {
-    id: "3",
-    title: "Courier Route",
-    subtitle: "Delivery progress tracking",
-    image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&auto=format&fit=crop",
-    height: 380,
-  },
-  {
-    id: "4",
-    title: "Weekend Bazaar",
-    subtitle: "Booked tickets and curated plans",
-    image: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=600&auto=format&fit=crop",
-    height: 260,
-  },
-  {
-    id: "5",
-    title: "City Loop",
-    subtitle: "Multiple stops, one journey",
-    image: "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&auto=format&fit=crop",
-    height: 300,
-  },
-  {
-    id: "6",
-    title: "On Time Delivery",
-    subtitle: "Tracking every checkpoint",
-    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=600&auto=format&fit=crop",
-    height: 220,
-  },
-  {
-    id: "7",
-    title: "Sunset Concert",
-    subtitle: "Live music under the stars",
-    image: "https://images.unsplash.com/photo-1459749411177-047381bb3ece?w=600&auto=format&fit=crop",
-    height: 340,
-  },
-  {
-    id: "8",
-    title: "Urban Bus Tour",
-    subtitle: "See the city in comfort",
-    image: "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=600&auto=format&fit=crop",
-    height: 200,
-  },
-  {
-    id: "9",
-    title: "Package Drop",
-    subtitle: "Same-day courier service",
-    image: "https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&auto=format&fit=crop",
-    height: 280,
-  },
-  {
-    id: "10",
-    title: "Food Festival",
-    subtitle: "Taste the world",
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=600&auto=format&fit=crop",
-    height: 360,
-  },
-  {
-    id: "11",
-    title: "Mountain Hike",
-    subtitle: "Guided trail adventures",
-    image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600&auto=format&fit=crop",
-    height: 250,
-  },
-  {
-    id: "12",
-    title: "Theatre Night",
-    subtitle: "Drama and performances",
-    image: "https://images.unsplash.com/photo-1503095392237-fc55088350b9?w=600&auto=format&fit=crop",
-    height: 310,
-  },
-  {
-    id: "13",
-    title: "Express Lane",
-    subtitle: "Fast-track bus passes",
-    image: "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=600&auto=format&fit=crop",
-    height: 190,
-  },
-  {
-    id: "14",
-    title: "Gift Box",
-    subtitle: "Premium courier packaging",
-    image: "https://images.unsplash.com/photo-1512909006721-3d6018887383?w=600&auto=format&fit=crop",
-    height: 290,
-  },
-  {
-    id: "15",
-    title: "Jazz Club",
-    subtitle: "Intimate live sessions",
-    image: "https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=600&auto=format&fit=crop",
-    height: 330,
-  },
-  {
-    id: "16",
-    title: "Coastal Route",
-    subtitle: "Scenic bus journeys",
-    image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=600&auto=format&fit=crop",
-    height: 270,
-  },
-  {
-    id: "17",
-    title: "Art Workshop",
-    subtitle: "Create and inspire",
-    image: "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&auto=format&fit=crop",
-    height: 350,
-  },
-  {
-    id: "18",
-    title: "Night Market",
-    subtitle: "Street food and crafts",
-    image: "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=600&auto=format&fit=crop",
-    height: 230,
-  },
-];
+/* ------------------------------------------------------------------ */
+// Category tabs
+/* ------------------------------------------------------------------ */
+function CategoryTabs({
+  categories,
+  selectedIndex,
+  onSelect,
+}: {
+  categories: string[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const { colors } = useLumTheme();
+  const scrollViewRef = useRef<ScrollView>(null);
 
+  useEffect(() => {
+    if (scrollViewRef.current && selectedIndex !== null) {
+      const timeout = setTimeout(() => {
+        scrollViewRef.current?.scrollTo({
+          x: Math.max(0, selectedIndex * 120 - 60),
+          animated: true,
+        });
+      }, 50);
+      return () => clearTimeout(timeout);
+    }
+  }, [selectedIndex]);
+
+  return (
+    <View
+      style={[
+        styles.pillsWrapper,
+        {
+          backgroundColor: colors.bg,
+          borderBottomColor: colors.border,
+        },
+      ]}
+    >
+      <ScrollView
+        ref={scrollViewRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.pillsContent}
+        scrollEventThrottle={16}
+        decelerationRate="normal"
+      >
+        {categories.map((cat, index) => {
+          const isSelected = index === selectedIndex;
+          return (
+            <Pressable
+              key={cat}
+              onPress={() => onSelect(index)}
+              style={[
+                styles.pill,
+                {
+                  backgroundColor: isSelected ? colors.gold : colors.bgAlt,
+                  transform: isSelected ? [{ scale: 1.05 }] : [{ scale: 1 }],
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.pillText,
+                  {
+                    color: isSelected ? colors.black : colors.ink,
+                    fontFamily: fontFamilies.bodySemi,
+                    fontWeight: isSelected ? "700" : "600",
+                  },
+                ]}
+              >
+                {cat}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+// Home page
+/* ------------------------------------------------------------------ */
 interface HomePageProps {
   onOpenAuth?: () => void;
   onOpenSettings?: () => void;
@@ -167,23 +119,173 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
+  const mobileSearchWidth = Math.min(220, Math.max(140, width * 0.52));
 
-  let columnCount = 2;
-  if (width >= 1400) columnCount = 6;
-  else if (width >= 1100) columnCount = 5;
-  else if (width >= 768) columnCount = 3;
-
-  const columns: Array<typeof PINS> = Array.from({ length: columnCount }, () => []);
-  PINS.forEach((pin, index) => {
-    columns[index % columnCount].push(pin);
-  });
+  const { user, logout } = useAuth();
 
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  const [selectedTicket, setSelectedTicket] = useState<TicketConfig | null>(null);
+  const [purchasePayload, setPurchasePayload] = useState<PurchasePayload | null>(null);
+  const [standaloneCategory, setStandaloneCategory] = useState<number | null>(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [notificationCount] = useState(3);
+
+  const iconOffset = Platform.OS !== "web" ? { marginTop: 45 } : {};
+  const pageScrollRef = useRef<ScrollView>(null);
+
+  /* ---------- Sync tab press → horizontal page scroll ---------- */
+  useEffect(() => {
+    pageScrollRef.current?.scrollTo({
+      x: selectedCategory * width,
+      animated: true,
+    });
+  }, [selectedCategory, width]);
+
+  /* ---------- Sync horizontal swipe end → active tab ---------- */
+  const handleMomentumScrollEnd = (e: any) => {
+    const offsetX = e.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(offsetX / width);
+    if (newIndex >= 0 && newIndex < CATEGORIES.length) {
+      setSelectedCategory(newIndex);
+    }
+  };
+
+  /* ---------- Standalone category (self-contained, no tabs) ---------- */
+  if (standaloneCategory !== null) {
+    const handleBackFromStandalone = () => setStandaloneCategory(null);
+    switch (standaloneCategory) {
+      case 0:
+        return <BusTickets onBack={handleBackFromStandalone} />;
+      case 1:
+        return <EventsTickets onBack={handleBackFromStandalone} />;
+      case 2:
+        return <TourismTickets onBack={handleBackFromStandalone} />;
+      case 3:
+        return <FlightTickets onBack={handleBackFromStandalone} />;
+      default:
+        setStandaloneCategory(null);
+    }
+  }
+
+  /* ---------- Full-screen Payment ---------- */
+  if (purchasePayload) {
+    return (
+      <PaymentPage
+        payload={purchasePayload}
+        onClose={() => setPurchasePayload(null)}
+        onComplete={() => {
+          setPurchasePayload(null);
+          setSelectedTicket(null);
+        }}
+      />
+    );
+  }
+
+  /* ---------- Full-screen Ticket Config ---------- */
+  if (selectedTicket) {
+    return (
+      <TicketConfigPage
+        ticket={selectedTicket}
+        onClose={() => setSelectedTicket(null)}
+        onNavigateToPayment={setPurchasePayload}
+      />
+    );
+  }
+
+  const handleDropdownAction = async (action: string) => {
+    setShowProfileDropdown(false);
+    if (action === "createAccount") onOpenAuth?.();
+    if (action === "settings") onOpenSettings?.();
+    if (action === "logout") await logout();
+  };
+
+  const renderDropdownContent = () => {
+    if (user) {
+      return (
+        <View style={{ gap: spacing(1) }}>
+          <View style={[styles.userInfoContainer, { borderBottomColor: colors.border }]}>
+            <Text
+              style={[
+                styles.userNameText,
+                { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+              ]}
+              numberOfLines={1}
+            >
+              {user.name || "User"}
+            </Text>
+            <Text
+              style={[
+                styles.userEmailText,
+                { color: colors.inkMuted, fontFamily: fontFamilies.body },
+              ]}
+              numberOfLines={1}
+            >
+              {user.email}
+            </Text>
+          </View>
+
+          <Pressable
+            onPress={() => handleDropdownAction("settings")}
+            style={styles.dropdownItem}
+          >
+            <Feather name="settings" size={18} color={colors.ink} />
+            <Text
+              style={[
+                styles.dropdownText,
+                { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+              ]}
+            >
+              Settings
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => handleDropdownAction("logout")}
+            style={[
+              styles.dropdownItem,
+              { borderTopWidth: 1, borderTopColor: colors.border },
+            ]}
+          >
+            <Feather name="log-out" size={18} color="#EF4444" />
+            <Text
+              style={[
+                styles.dropdownText,
+                { color: "#EF4444", fontFamily: fontFamilies.bodySemi },
+              ]}
+            >
+              Log Out
+            </Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    return (
+      <View style={{ gap: spacing(1) }}>
+        <Pressable
+          onPress={() => handleDropdownAction("createAccount")}
+          style={styles.dropdownItem}
+        >
+          <Feather name="user-plus" size={18} color={colors.ink} />
+          <Text
+            style={[
+              styles.dropdownText,
+              { color: colors.ink, fontFamily: fontFamilies.bodySemi },
+            ]}
+          >
+            Create Account
+          </Text>
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-      {/* Top bar: Search + Profile */}
+      {/* Desktop top bar */}
       {isDesktop && (
         <View
           style={[
@@ -204,7 +306,7 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
                 {
                   backgroundColor: colors.bgAlt,
                   borderWidth: 1,
-                  borderColor: colors.border,
+                  borderColor: colors.gold,
                 },
               ]}
             >
@@ -222,203 +324,197 @@ export default function HomePage({ onOpenAuth, onOpenSettings }: HomePageProps) 
               />
             </View>
 
-            <Pressable
-              style={[
-                styles.profilePoint,
-                { backgroundColor: colors.bgAlt },
-              ]}
-              onPress={() => onOpenAuth?.()}
-            >
-              <Feather name="user" size={20} color={colors.ink} />
-            </Pressable>
-          </View>
-        </View>
-      )}
-
-      {/* Mobile search (inline, not sticky) */}
-      {!isDesktop && (
-        <View style={[styles.mobileSearchWrap, { paddingHorizontal: spacing(3), paddingTop: spacing(3) }]}>
-          <View style={styles.mobileActionRow}>
-            <Pressable
-              style={[
-                styles.profilePoint,
-                { backgroundColor: colors.bgAlt },
-              ]}
-              onPress={() => onOpenAuth?.()}
-            >
-              <Feather name="user" size={18} color={colors.ink} />
-            </Pressable>
-
-            <Pressable
-              style={[
-                styles.profilePoint,
-                { backgroundColor: colors.bgAlt },
-              ]}
-              onPress={() => onOpenSettings?.()}
-            >
-              <Feather name="settings" size={18} color={colors.ink} />
-            </Pressable>
-          </View>
-          <View
-            style={[
-              styles.mobileSearchBar,
-              {
-                backgroundColor: colors.bgAlt,
-                borderWidth: 1,
-                borderColor: colors.border,
-              },
-            ]}
-          >
-            <Feather name="search" size={20} color={colors.inkMuted} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search"
-              placeholderTextColor={colors.inkMuted}
-              selectionColor={colors.gold}
-              style={[
-                styles.mobileSearchInput,
-                { color: colors.ink, fontFamily: fontFamilies.body },
-              ]}
-            />
-          </View>
-        </View>
-      )}
-
-      {/* Category Pills */}
-      <View
-        style={[
-          styles.pillsWrapper,
-          {
-            backgroundColor: colors.bg,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.pillsContent}
-        >
-          {CATEGORIES.map((cat, index) => {
-            const isSelected = index === selectedCategory;
-            return (
-              <Pressable
-                key={cat}
-                onPress={() => setSelectedCategory(index)}
-                style={[
-                  styles.pill,
-                  {
-                    backgroundColor: isSelected ? colors.gold : colors.bgAlt,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.pillText,
-                    {
-                      color: isSelected ? colors.black : colors.ink,
-                      fontFamily: fontFamilies.bodySemi,
-                    },
-                  ]}
-                >
-                  {cat}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      {/* Masonry Grid */}
-      <View
-        style={[
-          styles.board,
-          {
-            paddingHorizontal: isDesktop ? spacing(6) : spacing(2),
-            paddingTop: spacing(4),
-            paddingBottom: isDesktop ? spacing(10) : spacing(20),
-          },
-        ]}
-      >
-        {columns.map((column, colIndex) => (
-          <View key={`col-${colIndex}`} style={styles.column}>
-            {column.map((pin) => (
-              <Pressable key={pin.id} style={styles.pinWrap}>
-                <View
-                  style={[
-                    styles.pinCard,
-                    {
-                      backgroundColor: colors.surface,
-                      shadowColor: colors.shadow,
-                    },
-                  ]}
-                >
-                  <View style={styles.imageWrap}>
-                    <Image
-                      source={{ uri: pin.image }}
-                      style={[styles.pinImage, { height: pin.height }]}
-                      resizeMode="cover"
-                    />
-                    <View style={styles.saveOverlay}>
-                      <Pressable
-                        style={[
-                          styles.saveBtn,
-                          { backgroundColor: colors.gold },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.saveText,
-                            {
-                              color: colors.white,
-                              fontFamily: fontFamilies.bodySemi,
-                            },
-                          ]}
-                        >
-                          Save
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                  <View style={styles.pinBody}>
-                    <Text
-                      style={[
-                        styles.pinTitle,
-                        {
-                          color: colors.ink,
-                          fontFamily: fontFamilies.display,
-                        },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {pin.title}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.pinSubtitle,
-                        {
-                          color: colors.inkMuted,
-                          fontFamily: fontFamilies.body,
-                        },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {pin.subtitle}
-                    </Text>
+            <View style={styles.rightIcons}>
+              <Pressable style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}>
+                <View style={{ position: "relative" }}>
+                  <Feather name="bell" size={20} color={colors.inkMuted} />
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>{notificationCount}</Text>
                   </View>
                 </View>
               </Pressable>
-            ))}
+
+              <View style={{ position: "relative", zIndex: 60 }}>
+                <Pressable
+                  style={[styles.iconBtn, { backgroundColor: colors.bgAlt }]}
+                  onPress={() => setShowProfileDropdown(!showProfileDropdown)}
+                >
+                  <Feather name="user" size={20} color={colors.gold} />
+                </Pressable>
+
+                {showProfileDropdown && (
+                  <>
+                    <Pressable
+                      style={StyleSheet.absoluteFill}
+                      pointerEvents="auto"
+                      onPress={() => setShowProfileDropdown(false)}
+                    />
+                    <View
+                      style={[
+                        styles.dropdown,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: colors.border,
+                          shadowColor: colors.shadow,
+                        },
+                      ]}
+                    >
+                      {renderDropdownContent()}
+                    </View>
+                  </>
+                )}
+              </View>
+            </View>
           </View>
-        ))}
-      </View>
+        </View>
+      )}
+
+      {/* Mobile search */}
+      {!isDesktop && (
+        <View
+          style={[
+            styles.mobileSearchWrap,
+            {
+              paddingHorizontal: spacing(3),
+              paddingTop: spacing(3),
+              zIndex: 1,
+              elevation: 1,
+            },
+          ]}
+        >
+          <View style={styles.mobileActionRow}>
+            {isSearchOpen && (
+              <View
+                style={[
+                  styles.mobileSearchExpander,
+                  {
+                    backgroundColor: colors.bgAlt,
+                    borderColor: colors.gold,
+                    width: mobileSearchWidth,
+                    zIndex: 25,
+                    elevation: 25,
+                  },
+                ]}
+              >
+                <Feather name="search" size={16} color={colors.gold} />
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search"
+                  placeholderTextColor={colors.inkMuted}
+                  selectionColor={colors.gold}
+                  autoFocus
+                  onBlur={() => {
+                    if (!searchQuery.trim()) setIsSearchOpen(false);
+                  }}
+                  style={[
+                    styles.mobileSearchInput,
+                    { color: colors.ink, fontFamily: fontFamilies.body },
+                  ]}
+                />
+              </View>
+            )}
+
+            {!isSearchOpen && (
+              <Pressable
+                style={[
+                  styles.iconBtn,
+                  { backgroundColor: colors.bgAlt },
+                  iconOffset,
+                  { zIndex: 10, elevation: 10 },
+                ]}
+                onPress={() => setIsSearchOpen((prev) => !prev)}
+              >
+                <Feather name="search" size={18} color={colors.gold} />
+              </Pressable>
+            )}
+
+            <Pressable
+              style={[styles.iconBtn, { backgroundColor: colors.bgAlt }, iconOffset]}
+            >
+              <View style={{ position: "relative" }}>
+                <Feather name="bell" size={18} color={colors.inkMuted} />
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{notificationCount}</Text>
+                </View>
+              </View>
+            </Pressable>
+
+            <View style={{ position: "relative", zIndex: 20, elevation: 20 }}>
+              <Pressable
+                style={[styles.iconBtn, { backgroundColor: colors.bgAlt }, iconOffset]}
+                onPress={() => setShowProfileDropdown(!showProfileDropdown)}
+              >
+                <Feather name="user" size={18} color={colors.inkMuted} />
+              </Pressable>
+
+              {showProfileDropdown && (
+                <>
+                  <Pressable
+                    style={StyleSheet.absoluteFill}
+                    pointerEvents="auto"
+                    onPress={() => setShowProfileDropdown(false)}
+                  />
+                  <View
+                    style={[
+                      styles.dropdown,
+                      {
+                        backgroundColor: colors.bg,
+                        borderColor: colors.gold,
+                        shadowColor: colors.shadow,
+                        right: 0,
+                        left: "auto",
+                        zIndex: 50,
+                        elevation: 50,
+                      },
+                    ]}
+                  >
+                    {renderDropdownContent()}
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Category tabs */}
+      <CategoryTabs
+        categories={CATEGORIES}
+        selectedIndex={selectedCategory}
+        onSelect={setSelectedCategory}
+      />
+
+      {/* Horizontal swipeable pages */}
+      <ScrollView
+        ref={pageScrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={handleMomentumScrollEnd}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}
+      >
+        <View style={{ width, flex: 1 }}>
+          <BusTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <EventsTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <TourismTickets onSelectTicket={setSelectedTicket} />
+        </View>
+        <View style={{ width, flex: 1 }}>
+          <FlightTickets onSelectTicket={setSelectedTicket} />
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: {
+    flex: 1,
     width: "100%",
   },
   topBar: {
@@ -451,6 +547,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: spacing(4),
     gap: 10,
+    zIndex: 2,
+    overflow: "visible",
   },
   desktopSearchInput: {
     flex: 1,
@@ -461,39 +559,46 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     paddingVertical: 0,
+    minWidth: 0,
   },
-  profilePoint: {
+  iconBtn: {
     width: 48,
     height: 48,
     borderRadius: radii.full,
     alignItems: "center",
     justifyContent: "center",
   },
+  rightIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(3),
+  },
   mobileSearchWrap: {
     paddingBottom: spacing(2),
     gap: spacing(2),
+    zIndex: 1,
+    elevation: 1,
+    overflow: "visible",
   },
   mobileActionRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     gap: spacing(2),
+    overflow: "visible",
   },
-  mobileBrandBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: radii.full,
+  mobileSearchExpander: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-  },
-  mobileBrandBadgeText: {
-    fontSize: 18,
-    fontWeight: "900",
-  },
-  mobileBrand: {
-    fontSize: 28,
-    fontWeight: "800",
-    letterSpacing: 1,
+    height: 42,
+    minWidth: 140,
+    maxWidth: "72%",
+    borderRadius: radii.full,
+    borderWidth: 1,
+    paddingHorizontal: spacing(3),
+    gap: spacing(2),
+    marginRight: spacing(1),
+    overflow: "visible",
   },
   pillsWrapper: {
     borderBottomWidth: 1,
@@ -513,71 +618,69 @@ const styles = StyleSheet.create({
   pillText: {
     fontSize: 14,
   },
-  board: {
-    flexDirection: "row",
-    gap: spacing(3),
-    alignItems: "flex-start",
-    maxWidth: 1600,
-    alignSelf: "center",
-    width: "100%",
-  },
-  column: {
-    flex: 1,
-    gap: spacing(3),
-  },
-  pinWrap: {
-    width: "100%",
-    marginBottom: spacing(3),
-  },
-  pinCard: {
-    borderRadius: radii.xl,
-    overflow: "hidden",
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  },
-  imageWrap: {
-    position: "relative",
-    width: "100%",
-  },
-  pinImage: {
-    width: "100%",
-    borderBottomWidth: 1,
-  },
-  saveOverlay: {
+  dropdown: {
     position: "absolute",
-    top: 0,
-    left: 0,
+    top: 54,
     right: 0,
-    bottom: 0,
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    padding: spacing(3),
-  },
-  saveBtn: {
-    paddingHorizontal: spacing(4),
+    minWidth: 180,
+    borderRadius: radii.xl,
+    borderWidth: 1,
     paddingVertical: spacing(2),
-    borderRadius: radii.full,
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    paddingHorizontal: spacing(2),
+    zIndex: 5000,
+    elevation: 5000,
+    ...Platform.select({
+      web: {
+        boxShadow: "0 12px 28px rgba(11,31,58,0.28)",
+      },
+      default: {
+        shadowOpacity: 0.22,
+        shadowRadius: 18,
+        shadowOffset: { width: 0, height: 12 },
+        elevation: 5000,
+      },
+    }),
   },
-  saveText: {
-    fontSize: 13,
-  },
-  pinBody: {
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(3),
+    paddingVertical: spacing(3),
     paddingHorizontal: spacing(3),
-    paddingTop: spacing(3),
-    paddingBottom: spacing(3.5),
-    gap: 4,
+    borderRadius: radii.lg,
   },
-  pinTitle: {
-    fontSize: 14,
-    lineHeight: 18,
+  dropdownText: {
+    fontSize: 15,
   },
-  pinSubtitle: {
-    fontSize: 12,
+  userInfoContainer: {
+    paddingVertical: spacing(2),
+    paddingHorizontal: spacing(3),
+    borderBottomWidth: 1,
+    marginBottom: spacing(1),
+  },
+  userNameText: {
+    fontSize: 15,
+  },
+  userEmailText: {
+    fontSize: 13,
+    marginTop: 2,
+  },
+  badge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#EF4444",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
+    fontFamily: fontFamilies.bodySemi,
   },
 });

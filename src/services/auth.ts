@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 // TODO: point this at your Next.js API
-const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+const API_BASE_URL = (
+  process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"
+).replace(/\/$/, "");
 
 export interface User {
   id: string;
@@ -40,34 +41,46 @@ async function handleRes(res: Response) {
   return res.json();
 }
 
+async function requestAuth(path: string, init: RequestInit): Promise<AuthResponse> {
+  try {
+    const res = await fetch(`${API_BASE_URL}${path}`, init);
+    const data = await handleRes(res);
+    await saveToken(data.token);
+    return data;
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("Failed auth");
+    }
+    throw error;
+  }
+}
+
 /* ---------- auth API ---------- */
 export async function signup(
   email: string,
   password: string,
   name: string
 ): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/auth/signup`, {
+  return requestAuth("/api/auth/signup", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({
+      email: email.trim().toLowerCase(),
+      password,
+      name: name.trim(),
+    }),
   });
-  const data = await handleRes(res);
-  await saveToken(data.token);
-  return data;
 }
 
 export async function login(
   email: string,
   password: string
 ): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+  return requestAuth("/api/auth/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
   });
-  const data = await handleRes(res);
-  await saveToken(data.token);
-  return data;
 }
 
 export async function googleAuth(

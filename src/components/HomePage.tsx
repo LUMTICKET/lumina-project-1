@@ -10,6 +10,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useAuth } from "../context/AuthContext";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, palette, radii, spacing } from "../theme/tokens";
 
@@ -95,11 +96,19 @@ const heroSlides = [
 
 export default function HomePage({ onOpenAuth }: HomePageProps) {
   const { colors } = useLumTheme();
+  const { user, openAuth } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 800;
   const [savedEvents, setSavedEvents] = useState<Set<string>>(new Set());
   const [activeHeroSlide, setActiveHeroSlide] = useState(0);
   const heroCarouselRef = useRef<ScrollView>(null);
+
+  const profileInitials = (user?.name || user?.email || "U")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -292,17 +301,25 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
               </Text>
             </Pressable>
           )}
-          <Pressable style={styles.solidBtn} onPress={onOpenAuth}>
-            <Feather name="log-in" size={15} color={colors.black} />
-            <Text
-              style={[
-                styles.solidBtnText,
-                { fontFamily: fontFamilies.bodySemi },
-              ]}
+          {user ? (
+            <View style={[styles.profileCircle, { borderColor: colors.white }]}> 
+              {user.avatar ? (
+                <Image source={{ uri: user.avatar }} style={styles.profileImage} />
+              ) : (
+                <Text style={[styles.profileInitials, { color: colors.black, fontFamily: fontFamilies.bodySemi }]}> 
+                  {profileInitials}
+                </Text>
+              )}
+            </View>
+          ) : (
+            <Pressable
+              style={styles.solidBtn}
+              onPress={() => (onOpenAuth ? onOpenAuth() : openAuth("login"))}
             >
-              Login
-            </Text>
-          </Pressable>
+              <Feather name="log-in" size={15} color={colors.black} />
+              <Text style={[styles.solidBtnText, { fontFamily: fontFamilies.bodySemi }]}>Login</Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.heroContent}>
@@ -451,6 +468,23 @@ const styles = StyleSheet.create({
     color: palette.black,
     fontSize: 13,
     fontWeight: "600",
+  },
+  profileCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: radii.full,
+    backgroundColor: palette.white,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  profileImage: {
+    width: "100%",
+    height: "100%",
+  },
+  profileInitials: {
+    fontSize: 14,
   },
   heroContent: {
     position: "relative",

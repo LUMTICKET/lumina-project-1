@@ -387,11 +387,13 @@ export default function PaymentPage({ payload, onClose, onComplete, creationFee 
                 </Text>
                 <TextInput
                   value={phone}
-                  onChangeText={setPhone}
+                  onChangeText={(value) => setPhone(value.replace(/\D/g, "").slice(0, 9))}
                   keyboardType="number-pad"
+                  inputMode="numeric"
                   maxLength={9}
                   placeholder="88XXXXXXX"
                   placeholderTextColor={colors.inkMuted}
+                  autoComplete="tel"
                   style={[
                     styles.input,
                     { color: colors.ink, fontFamily: fontFamilies.bodySemi },
@@ -424,9 +426,11 @@ export default function PaymentPage({ payload, onClose, onComplete, creationFee 
                 value={cardNumber}
                 onChangeText={(t) => setCardNumber(formatCardNumber(t))}
                 keyboardType="number-pad"
+                inputMode="numeric"
                 maxLength={19}
                 placeholder="0000 0000 0000 0000"
                 placeholderTextColor={colors.inkMuted}
+                autoComplete="cc-number"
                 style={[
                   styles.cardInput,
                   {
@@ -452,9 +456,11 @@ export default function PaymentPage({ payload, onClose, onComplete, creationFee 
                     value={cardExpiry}
                     onChangeText={(t) => setCardExpiry(formatExpiry(t))}
                     keyboardType="number-pad"
+                    inputMode="numeric"
                     maxLength={5}
                     placeholder="MM/YY"
                     placeholderTextColor={colors.inkMuted}
+                    autoComplete="cc-exp"
                     style={[
                       styles.cardInput,
                       {
@@ -477,12 +483,14 @@ export default function PaymentPage({ payload, onClose, onComplete, creationFee 
                   </Text>
                   <TextInput
                     value={cardCvv}
-                    onChangeText={setCardCvv}
+                    onChangeText={(value) => setCardCvv(value.replace(/\D/g, "").slice(0, 4))}
                     keyboardType="number-pad"
+                    inputMode="numeric"
                     maxLength={4}
                     placeholder="123"
                     placeholderTextColor={colors.inkMuted}
                     secureTextEntry
+                    autoComplete="cc-csc"
                     style={[
                       styles.cardInput,
                       {
@@ -510,6 +518,7 @@ export default function PaymentPage({ payload, onClose, onComplete, creationFee 
                 placeholder="Name on card"
                 placeholderTextColor={colors.inkMuted}
                 autoCapitalize="words"
+                autoComplete="cc-name"
                 style={[
                   styles.cardInput,
                   {

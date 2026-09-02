@@ -1,7 +1,11 @@
 import { BusinessProfile } from '../components/settings/types';
 import { getToken } from './auth';
 
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_BASE = (
+  process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000'
+).replace(/\/$/, '');
+
+const KYB_ENDPOINT = `${API_BASE}/api/kyb`;
 
 async function getAuthHeaders(extraHeaders: Record<string, string> = {}) {
   const token = await getToken();
@@ -28,7 +32,7 @@ function normalizeBusinessProfile(payload: unknown): BusinessProfile | null {
 export async function getBusinessProfile(): Promise<BusinessProfile | null> {
   try {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_BASE}/kyb`, { headers });
+    const response = await fetch(KYB_ENDPOINT, { headers });
 
     if (response.status === 404) return null;
     if (!response.ok) {
@@ -47,7 +51,7 @@ export async function getBusinessProfile(): Promise<BusinessProfile | null> {
 export async function createProfile(
   profileData: Omit<BusinessProfile, 'id' | 'isVerified' | 'userId'>
 ): Promise<BusinessProfile> {
-  const response = await fetch(`${API_BASE}/kyb`, {
+  const response = await fetch(KYB_ENDPOINT, {
     method: 'POST',
     headers: await getAuthHeaders(),
     body: JSON.stringify(profileData),
@@ -66,7 +70,7 @@ export async function updateProfile(
   profileId: string | number,
   profileData: Partial<BusinessProfile>
 ): Promise<BusinessProfile> {
-  const response = await fetch(`${API_BASE}/kyb/${profileId}`, {
+  const response = await fetch(`${KYB_ENDPOINT}/${profileId}`, {
     method: 'PUT',
     headers: await getAuthHeaders(),
     body: JSON.stringify(profileData),
@@ -82,7 +86,7 @@ export async function updateProfile(
 
 /** DELETE /api/kyb/:id */
 export async function deleteProfile(profileId: string | number): Promise<void> {
-  const response = await fetch(`${API_BASE}/kyb/${profileId}`, {
+  const response = await fetch(`${KYB_ENDPOINT}/${profileId}`, {
     method: 'DELETE',
     headers: await getAuthHeaders(),
   });

@@ -711,11 +711,11 @@ export default function PaymentPage({ payload, onClose, onComplete, creationFee 
             }}
           >
             <View style={{ maxWidth: 640, width: "100%" }}>
-              <Content />
+              {Content()}
             </View>
           </View>
         ) : (
-          <Content />
+          {Content()}
         )}
       </View>
     </Wrapper>

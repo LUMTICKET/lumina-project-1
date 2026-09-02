@@ -30,7 +30,7 @@ interface EventItem {
   image: string;
 }
 
-const eventsNYC: EventItem[] = [
+const busTravellerItems: EventItem[] = [
   {
     id: "nyc-1",
     host: "Malawi Events Hub",
@@ -52,7 +52,7 @@ const eventsNYC: EventItem[] = [
   },
 ];
 
-const eventsLA: EventItem[] = [
+const airTravelItems: EventItem[] = [
   {
     id: "la-1",
     host: "Blantyre Social Club",
@@ -363,10 +363,10 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
               },
             ]}
           >
-            lilongwe
+            Bus travellers
           </Text>
           <View style={{ gap: spacing(4) }}>
-            {eventsNYC.map(renderEventCard)}
+            {busTravellerItems.map(renderEventCard)}
           </View>
         </View>
 
@@ -381,10 +381,10 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
               },
             ]}
           >
-            blantyre
+            Air travellers
           </Text>
           <View style={{ gap: spacing(4) }}>
-            {eventsLA.map(renderEventCard)}
+            {airTravelItems.map(renderEventCard)}
           </View>
         </View>
       </View>

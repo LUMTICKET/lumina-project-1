@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Platform,
   Pressable,
@@ -14,6 +15,8 @@ import {
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
+import { getToken } from "../services/auth";
+import { useAuth } from "../context/AuthContext";
 
 /* ------------------------------------------------------------------ */
 // Types
@@ -85,6 +88,7 @@ function makeId() {
 /* ------------------------------------------------------------------ */
 export default function Create() {
   const { colors } = useLumTheme();
+  const { user, businessProfile } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
 
@@ -230,17 +234,91 @@ export default function Create() {
   });
 
   const handleGoToPayment = () => {
-    if (!title.trim()) return;
+    if (!user) {
+      Alert.alert("Authentication required", "Please log in before creating a ticket.");
+      return;
+    }
+    if (!businessProfile?.id || !businessProfile.isVerified) {
+      Alert.alert("Verified business profile required", "Complete and verify your business profile before creating tickets.");
+      return;
+    }
+    if (!title.trim() || !organizer.trim() || !location.trim() || !date.trim() || !time.trim()) {
+      Alert.alert("Missing details", "Add the title, organizer, date, time, and location before continuing.");
+      return;
+    }
+    if (tiers.some((tier) => !tier.name.trim() || Number(tier.price) <= 0 || Number(tier.remaining) <= 0)) {
+      Alert.alert("Invalid ticket types", "Each ticket type needs a name, price, and available capacity.");
+      return;
+    }
     setScreen("checkout");
   };
 
-  const handlePay = () => {
+  const handlePay = async () => {
+    if (!businessProfile?.id) return;
     setPaying(true);
-    setTimeout(() => {
-      setPaying(false);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Please log in again before publishing.");
+
+      const apiUrl = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000").replace(/\/$/, "");
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+      const payload = buildPayload();
+
+      const paymentResponse = await fetch(`${apiUrl}/api/payments/simulate`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          businessProfileId: Number(businessProfile.id),
+          amount: PLATFORM_FEE,
+          currency: CURRENCY,
+          method: payMethod,
+        }),
+      });
+      if (!paymentResponse.ok) {
+        const error = await paymentResponse.json().catch(() => ({}));
+        throw new Error(error.error || "Payment simulation failed.");
+      }
+
+      const payment = await paymentResponse.json();
+      const eventResponse = await fetch(`${apiUrl}/api/events`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          title: payload.title,
+          subtitle: payload.subtitle,
+          category: payload.category,
+          organizer: payload.organizer,
+          description: payload.description,
+          location: payload.location,
+          startsAt: payload.date,
+          maxPerUser: payload.maxPerUser,
+          tags: payload.tags,
+          route: payload.route,
+          businessProfileId: Number(businessProfile.id),
+          paymentId: payment.id,
+          tickets: payload.tiers.map((tier) => ({
+            name: tier.name,
+            price: Number(tier.price),
+            currency: tier.currency || CURRENCY,
+            perks: tier.perks,
+            capacity: Number(tier.remaining),
+          })),
+        }),
+      });
+      if (eventResponse.status !== 201) {
+        const error = await eventResponse.json().catch(() => ({}));
+        throw new Error(error.error || "Event creation failed.");
+      }
+
       setScreen("success");
-      console.log("✅ Published after payment:", JSON.stringify(buildPayload(), null, 2));
-    }, 2200);
+    } catch (error: any) {
+      Alert.alert("Publish failed", error?.message || "Could not publish this ticket.");
+    } finally {
+      setPaying(false);
+    }
   };
 
   const resetForm = () => {

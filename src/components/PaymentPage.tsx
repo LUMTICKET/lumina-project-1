@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
+import { simulatePayment } from "../services/payments";
 
 /* ------------------------------------------------------------------ */
 // Assets
@@ -159,9 +160,10 @@ interface PaymentPageProps {
   payload: PurchasePayload;
   onClose?: () => void;
   onComplete?: (result: { success: boolean; method: PaymentMethod; reference?: string }) => void;
+  creationFee?: { businessProfileId: number };
 }
 
-export default function PaymentPage({ payload, onClose, onComplete }: PaymentPageProps) {
+export default function PaymentPage({ payload, onClose, onComplete, creationFee }: PaymentPageProps) {
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 900;
@@ -180,15 +182,19 @@ export default function PaymentPage({ payload, onClose, onComplete }: PaymentPag
   const handlePay = async () => {
     if (isProcessing) return;
     setStatus("processing");
-
-    setTimeout(() => {
+    try {
+      const payment = creationFee
+        ? await simulatePayment(creationFee.businessProfileId, payload.totalPrice, payload.currency, method === "mpamba" ? "tnm" : method)
+        : null;
       setStatus("success");
       onComplete?.({
         success: true,
         method,
-        reference: `LUM-${Date.now()}`,
+        reference: payment ? String(payment.id) : `LUM-${Date.now()}`,
       });
-    }, 2500);
+    } catch (error) {
+      setStatus("failed");
+    }
   };
 
   const isValid = () => {

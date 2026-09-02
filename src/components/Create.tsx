@@ -18,6 +18,7 @@ import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, radii, spacing } from "../theme/tokens";
 import { getToken } from "../services/auth";
 import { useAuth } from "../context/AuthContext";
+import PaymentPage, { PurchasePayload } from "./PaymentPage";
 
 /* ------------------------------------------------------------------ */
 // Types
@@ -256,7 +257,7 @@ export default function Create() {
     setScreen("checkout");
   };
 
-  const handlePay = async () => {
+  const handlePay = async (existingPaymentId?: string) => {
     if (!businessProfile?.id) {
       Alert.alert("Business profile required", "A business profile is needed by the publishing API, but you can continue through the payment step.");
       return;
@@ -273,22 +274,25 @@ export default function Create() {
       };
       const payload = buildPayload();
 
-      const paymentResponse = await fetch(`${apiUrl}/api/payments/simulate`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          businessProfileId: Number(businessProfile.id),
-          amount: PLATFORM_FEE,
-          currency: CURRENCY,
-          method: payMethod,
-        }),
-      });
-      if (!paymentResponse.ok) {
-        const error = await paymentResponse.json().catch(() => ({}));
-        throw new Error(error.error || "Payment simulation failed.");
+      let paymentId = existingPaymentId;
+      if (!paymentId) {
+        const paymentResponse = await fetch(`${apiUrl}/api/payments/simulate`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            businessProfileId: Number(businessProfile.id),
+            amount: PLATFORM_FEE,
+            currency: CURRENCY,
+            method: payMethod,
+          }),
+        });
+        if (!paymentResponse.ok) {
+          const error = await paymentResponse.json().catch(() => ({}));
+          throw new Error(error.error || "Payment simulation failed.");
+        }
+        const payment = await paymentResponse.json();
+        paymentId = String(payment.id);
       }
-
-      const payment = await paymentResponse.json();
       const eventResponse = await fetch(`${apiUrl}/api/events`, {
         method: "POST",
         headers,
@@ -304,7 +308,7 @@ export default function Create() {
           tags: payload.tags,
           route: payload.route,
           businessProfileId: Number(businessProfile.id),
-          paymentId: payment.id,
+          paymentId: Number(paymentId),
           tickets: payload.tiers.map((tier) => ({
             name: tier.name,
             price: Number(tier.price),
@@ -467,6 +471,48 @@ export default function Create() {
   // RENDER: CHECKOUT
   /* ---------------------------------------------------------------- */
   if (screen === "checkout") {
+    if (!businessProfile?.id) {
+      return (
+        <View style={[styles.wrap, { backgroundColor: colors.bg, justifyContent: "center", alignItems: "center", padding: spacing(5) }]}>
+          <Feather name="briefcase" size={42} color={colors.gold} />
+          <Text style={[styles.successTitle, { color: colors.ink, fontFamily: fontFamilies.display }]}>Business profile required</Text>
+          <Text style={[styles.successSub, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>Add a business profile before paying the publishing fee.</Text>
+          <Pressable onPress={() => setScreen("form")} style={[styles.publishBtn, { backgroundColor: colors.gold, marginTop: spacing(5) }]}>
+            <Text style={[styles.publishText, { color: colors.black, fontFamily: fontFamilies.bodySemi }]}>Back to ticket</Text>
+          </Pressable>
+        </View>
+      );
+    }
+
+    const paymentPayload: PurchasePayload = {
+      ticketId: `${category}-${Date.now()}`,
+      tierId: "publishing-fee",
+      quantity: 1,
+      mode: "instant",
+      totalPrice: PLATFORM_FEE,
+      currency: CURRENCY,
+      ticketTitle: `Publish ${CATEGORIES[activeIndex].label}`,
+      tierName: "Ticket creation fee",
+    };
+
+    return (
+      <PaymentPage
+        payload={paymentPayload}
+        creationFee={{ businessProfileId: Number(businessProfile.id) }}
+        onClose={() => setScreen("form")}
+        onComplete={async (result) => {
+          if (!result.success) return;
+          try {
+            await handlePay(result.reference);
+          } catch (error: any) {
+            Alert.alert("Ticket creation failed", error?.message || "Could not create this ticket.");
+          }
+        }}
+      />
+    );
+  }
+
+  if (false) {
     return (
       <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
         <View

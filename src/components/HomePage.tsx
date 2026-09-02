@@ -13,6 +13,7 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useLumTheme } from "../theme/ThemeContext";
 import { fontFamilies, palette, radii, spacing } from "../theme/tokens";
+import { useRouter } from "expo-router";
 
 interface HomePageProps {
   onOpenAuth?: () => void;
@@ -95,6 +96,7 @@ const heroSlides = [
 ];
 
 export default function HomePage({ onOpenAuth }: HomePageProps) {
+  const router = useRouter();
   const { colors } = useLumTheme();
   const { user, openAuth } = useAuth();
   const { width } = useWindowDimensions();
@@ -302,7 +304,11 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
             </Pressable>
           )}
           {user ? (
-            <View style={[styles.profileCircle, { borderColor: colors.white }]}> 
+            <Pressable
+              accessibilityLabel="Open profile"
+              onPress={() => router.push("/profile" as any)}
+              style={[styles.profileCircle, { borderColor: colors.white }]}
+            >
               {user.avatar ? (
                 <Image source={{ uri: user.avatar }} style={styles.profileImage} />
               ) : (
@@ -310,7 +316,7 @@ export default function HomePage({ onOpenAuth }: HomePageProps) {
                   {profileInitials}
                 </Text>
               )}
-            </View>
+            </Pressable>
           ) : (
             <Pressable
               style={styles.solidBtn}

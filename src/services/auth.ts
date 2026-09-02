@@ -118,6 +118,17 @@ export async function getMe(): Promise<User | null> {
 }
 
 export async function logout() {
+  const token = await getToken();
+  if (token) {
+    try {
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      // Local sign-out still completes if the API is unavailable.
+    }
+  }
   await removeToken();
 }
 

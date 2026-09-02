@@ -33,6 +33,7 @@ export default function FeedsTabScreen() {
           styles.content,
           {
             paddingLeft: isDesktop ? 92 : 0,
+            paddingRight: isDesktop ? 24 : 0,
             paddingBottom: isDesktop ? 0 : 60,
           },
         ]}
@@ -49,5 +50,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    overflow: "hidden",
   },
 });

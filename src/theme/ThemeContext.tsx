@@ -11,25 +11,23 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-const resolveSystemMode = (): ThemeMode => "dark";
+const resolveSystemMode = (): ThemeMode => "light";
 
 export function LumThemeProvider({ children }: { children: React.ReactNode }) {
   const system = useColorScheme();
   const [mode, setModeState] = useState<ThemeMode>(() =>
-    system === "dark" || system === "light" ? "dark" : resolveSystemMode()
+    system === "dark" || system === "light" ? system : resolveSystemMode()
   );
 
   useEffect(() => {
-    setModeState("dark");
+    setModeState(system === "dark" ? "dark" : "light");
   }, [system]);
 
   const setMode = (next: ThemeMode) => {
-    if (next === "dark") {
-      setModeState("dark");
-    }
+    setModeState(next === "dark" || next === "light" ? next : "light");
   };
 
-  const toggle = () => setMode("dark");
+  const toggle = () => setMode(mode === "dark" ? "light" : "dark");
 
   const value = useMemo<ThemeContextValue>(
     () => ({ mode, colors: getColors(mode), toggle, setMode }),

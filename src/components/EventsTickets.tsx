@@ -61,14 +61,7 @@ export default function EventsTickets({ onSelectTicket, onBack }: EventsTicketsP
   const { colors } = useLumTheme();
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
-
-  let columnCount = 2;
-  if (width >= 1400) columnCount = 6;
-  else if (width >= 1100) columnCount = 5;
-  else if (width >= 768) columnCount = 3;
-
-  const columns: Array<typeof ITEMS> = Array.from({ length: columnCount }, () => []);
-  ITEMS.forEach((item, i) => columns[i % columnCount].push(item));
+  const isTwoCol = width >= 768;
 
   const showHeader = !!onBack;
 
@@ -102,38 +95,62 @@ export default function EventsTickets({ onSelectTicket, onBack }: EventsTicketsP
 
       <ScrollView
         contentContainerStyle={{
-          paddingHorizontal: isDesktop ? spacing(6) : spacing(2),
+          paddingHorizontal: isDesktop ? spacing(6) : spacing(3),
           paddingTop: spacing(4),
           paddingBottom: isDesktop ? spacing(10) : spacing(20),
         }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.board}>
-          {columns.map((col, ci) => (
-            <View key={ci} style={styles.column}>
-              {col.map((pin) => (
-                <Pressable key={pin.id} style={styles.pinWrap} onPress={() => onSelectTicket?.(pin)}>
-                  <View style={[styles.pinCard, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-                    <View style={styles.imageWrap}>
-                      <Image source={pin.image} style={[styles.pinImage, { height: 300 }]} resizeMode="cover" />
-                      <View style={styles.saveOverlay}>
-                        <Pressable 
-                          style={[styles.saveBtn, { backgroundColor: colors.gold }]}
-                          onPress={() => onSelectTicket?.(pin)}
-                        >
-                          <Text style={[styles.saveText, { color: colors.white, fontFamily: fontFamilies.bodySemi }]}>Get Ticket</Text>
-                        </Pressable>
-                      </View>
+        <View style={{ maxWidth: 1200, alignSelf: "center", width: "100%" }}>
+          <View style={styles.grid}>
+            {ITEMS.map((ticket) => (
+              <Pressable
+                key={ticket.id}
+                onPress={() => onSelectTicket?.(ticket)}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: colors.surface,
+                    shadowColor: colors.shadow,
+                    width: isTwoCol ? "48.5%" : "100%",
+                  },
+                ]}
+              >
+                <View style={styles.cardImageWrap}>
+                  <Image source={ticket.image} style={styles.cardImage} resizeMode="cover" />
+                </View>
+
+                <View style={styles.cardBody}>
+                  <View>
+                    <View style={styles.organizerRow}>
+                      <Text style={[styles.organizerText, { color: colors.inkMuted, fontFamily: fontFamilies.bodySemi }]} numberOfLines={1}>
+                        {ticket.organizer}
+                      </Text>
+                      <Feather name="chevron-right" size={14} color={colors.inkMuted} />
                     </View>
-                    <View style={styles.pinBody}>
-                      <Text style={[styles.pinTitle, { color: colors.ink, fontFamily: fontFamilies.display }]} numberOfLines={2}>{pin.title}</Text>
-                      <Text style={[styles.pinSubtitle, { color: colors.inkMuted, fontFamily: fontFamilies.body }]} numberOfLines={1}>{pin.subtitle}</Text>
-                    </View>
+
+                    <Text style={[styles.cardTitle, { color: colors.ink, fontFamily: fontFamilies.display }]} numberOfLines={2}>
+                      {ticket.title}
+                    </Text>
+
+                    <Text style={[styles.cardMeta, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>
+                      {ticket.date ? new Date(ticket.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : ""} · {ticket.time}
+                    </Text>
                   </View>
-                </Pressable>
-              ))}
-            </View>
-          ))}
+
+                  <View style={styles.cardFooter}>
+                    <Text style={[styles.priceText, { color: colors.gold, fontFamily: fontFamilies.bodySemi }]}>
+                      From {ticket.tiers?.[0]?.price.toLocaleString() || "0"} {ticket.tiers?.[0]?.currency || "MWK"}
+                    </Text>
+
+                    <Pressable style={[styles.starBtn, { backgroundColor: colors.bgAlt }]}>
+                      <Feather name="arrow-right" size={18} color={colors.ink} />
+                    </Pressable>
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -166,16 +183,67 @@ const styles = StyleSheet.create({
     fontFamily: fontFamilies.display,
   },
 
-  board: { flexDirection: "row", gap: spacing(3), alignItems: "flex-start", maxWidth: 1600, alignSelf: "center", width: "100%" },
-  column: { flex: 1, gap: spacing(3) },
-  pinWrap: { width: "100%", marginBottom: spacing(3) },
-  pinCard: { borderRadius: radii.xl, overflow: "hidden", shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
-  imageWrap: { position: "relative", width: "100%" },
-  pinImage: { width: "100%" },
-  saveOverlay: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-start", alignItems: "flex-end", padding: spacing(3) },
-  saveBtn: { paddingHorizontal: spacing(4), paddingVertical: spacing(2), borderRadius: radii.full, shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 4 },
-  saveText: { fontSize: 13 },
-  pinBody: { paddingHorizontal: spacing(3), paddingTop: spacing(3), paddingBottom: spacing(3.5), gap: 4 },
-  pinTitle: { fontSize: 14, lineHeight: 18 },
-  pinSubtitle: { fontSize: 12 },
+  grid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
+  card: {
+    flexDirection: "row",
+    borderRadius: radii.xl,
+    overflow: "hidden",
+    marginBottom: spacing(3),
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+  cardImageWrap: {
+    width: "38%",
+    aspectRatio: 1,
+    backgroundColor: "#1a1a1a",
+  },
+  cardImage: {
+    width: "100%",
+    height: "100%",
+  },
+  cardBody: {
+    flex: 1,
+    padding: spacing(3),
+    justifyContent: "space-between",
+  },
+  organizerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginBottom: spacing(1),
+  },
+  organizerText: {
+    fontSize: 12,
+  },
+  cardTitle: {
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: spacing(0.5),
+  },
+  cardMeta: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: spacing(2),
+  },
+  priceText: {
+    fontSize: 13,
+  },
+  starBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

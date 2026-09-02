@@ -35,15 +35,19 @@ const MOBILE_ITEMS: { icon: keyof typeof Feather.glyphMap; route: RouteName; lab
 ];
 
 function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
-  const { colors } = useLumTheme();
+  const { colors, mode } = useLumTheme();
+  const navBg = mode === "dark" ? colors.black : colors.white;
+  const navText = mode === "dark" ? colors.white : colors.black;
+  const navMuted = mode === "dark" ? "rgba(255,255,255,0.7)" : colors.inkMuted;
+  const navBorder = mode === "dark" ? "rgba(255,255,255,0.1)" : colors.border;
 
   return (
     <View
       style={[
         styles.sidebar,
         {
-          backgroundColor: colors.bg,
-          borderRightColor: colors.border,
+          backgroundColor: navBg,
+          borderRightColor: navBorder,
         },
         Platform.OS === "web"
           ? ({ position: "fixed", top: 0, left: 0, bottom: 0, zIndex: 1000 } as any)
@@ -72,20 +76,20 @@ function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
               {item.route === "Feeds" ? (
                 <ReelsIcon
                   size={22}
-                  color={isActive ? colors.inkMuted : colors.gold}
+                  color={isActive ? navMuted : colors.gold}
                 />
               ) : (
                 <Feather
                   name={item.icon}
                   size={22}
-                  color={isActive ? colors.inkMuted : colors.gold}
+                  color={isActive ? navMuted : colors.gold}
                 />
               )}
               <Text
                 style={[
                   styles.navLabel,
                   {
-                    color: isActive ? colors.ink : colors.gold,
+                    color: isActive ? navText : colors.gold,
                   },
                 ]}
               >
@@ -96,22 +100,27 @@ function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
         })}
       </View>
 
-      <View style={[styles.divider, { backgroundColor: colors.border, marginTop: "auto" }]} />
+      <View style={[styles.divider, { backgroundColor: navBorder, marginTop: "auto" }]} />
 
       <Pressable
-        style={[styles.profileBtn, currentRoute === "Settings" && styles.activeIconBtn]}
+        style={[
+          styles.profileBtn,
+          currentRoute === "Settings" && {
+            backgroundColor: mode === "dark" ? "rgba(255,255,255,0.08)" : "rgba(4,5,33,0.04)",
+          },
+        ]}
         onPress={() => onNavigate("Settings")}
       >
         <Feather
           name="settings"
           size={22}
-          color={currentRoute === "Settings" ? colors.inkMuted : colors.gold}
+          color={currentRoute === "Settings" ? navText : colors.gold}
         />
         <Text
           style={[
             styles.navLabel,
             {
-              color: currentRoute === "Settings" ? colors.ink : colors.gold,
+              color: currentRoute === "Settings" ? navText : colors.gold,
             },
           ]}
         >
@@ -123,15 +132,19 @@ function DesktopSidebar({ currentRoute, onNavigate }: NavbarProps) {
 }
 
 function MobileBottomNav({ currentRoute, onNavigate }: NavbarProps) {
-  const { colors } = useLumTheme();
+  const { colors, mode } = useLumTheme();
+  const navBg = mode === "dark" ? colors.black : colors.white;
+  const navText = mode === "dark" ? colors.white : colors.black;
+  const navMuted = mode === "dark" ? "rgba(255,255,255,0.7)" : colors.inkMuted;
+  const navBorder = mode === "dark" ? "rgba(255,255,255,0.1)" : colors.border;
 
   return (
     <View
       style={[
         styles.mobileNav,
         {
-          backgroundColor: colors.bg,
-          borderTopColor: colors.border,
+          backgroundColor: navBg,
+          borderTopColor: navBorder,
         },
         Platform.OS === "web"
           ? ({ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 1000 } as any)
@@ -149,20 +162,20 @@ function MobileBottomNav({ currentRoute, onNavigate }: NavbarProps) {
             {item.route === "Feeds" ? (
               <ReelsIcon
                 size={22}
-                color={isActive ? colors.inkMuted : colors.gold}
+                color={isActive ? navMuted : colors.gold}
               />
             ) : (
               <Feather
                 name={item.icon}
                 size={22}
-                color={isActive ? colors.inkMuted : colors.gold}
+                color={isActive ? navMuted : colors.gold}
               />
             )}
             <Text
               style={[
                 styles.mobileLabel,
                 {
-                  color: isActive ? colors.ink : colors.gold,
+                  color: isActive ? navText : colors.gold,
                 },
               ]}
             >

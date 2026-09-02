@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
-import { createElement, useState } from "react";
+import { createElement, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,6 +19,7 @@ import { fontFamilies, radii, spacing } from "../theme/tokens";
 import { getToken } from "../services/auth";
 import { useAuth } from "../context/AuthContext";
 import PaymentPage, { PurchasePayload } from "./PaymentPage";
+import { CreatedEvent, getCreatedEvents } from "../services/events";
 
 /* ------------------------------------------------------------------ */
 // Types
@@ -71,13 +72,6 @@ const CATEGORIES: CategoryMeta[] = [
   { key: "tourism", label: "Tourism", icon: "map", desc: "Tours, parks, attractions" },
 ];
 
-/* Mock recent tickets — replace with API call */
-const RECENT_TICKETS: RecentTicket[] = [
-  { id: "1", title: "Lilongwe Food Fest", category: "Event", date: "2026-08-20", status: "published" },
-  { id: "2", title: "Blantyre to Mzuzu", category: "Bus Route", date: "2026-08-18", status: "published" },
-  { id: "3", title: "Mulanje Mountain Trek", category: "Tourism", date: "2026-08-15", status: "draft" },
-];
-
 /* ------------------------------------------------------------------ */
 // Helpers
 /* ------------------------------------------------------------------ */
@@ -103,6 +97,32 @@ export default function Create() {
   const [payMethod, setPayMethod] = useState<PaymentMethod>("tnm");
   const [paying, setPaying] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [recentTickets, setRecentTickets] = useState<RecentTicket[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!showHistory || !businessProfile?.id) return;
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      try {
+        const events = await getCreatedEvents(businessProfile.id);
+        setRecentTickets(events.map((event: CreatedEvent) => ({
+          id: String(event.id),
+          title: event.title,
+          category: event.category ? event.category[0].toUpperCase() + event.category.slice(1) : "Ticket",
+          date: (event.startsAt || event.date || "").slice(0, 10),
+          status: event.status === "draft" ? "draft" : "published",
+        })));
+      } catch (error: any) {
+        setHistoryError(error?.message || "Could not load ticket history.");
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+    loadHistory();
+  }, [showHistory, businessProfile?.id]);
 
   /* ---- Category ---- */
   const [activeIndex, setActiveIndex] = useState(0);
@@ -392,7 +412,16 @@ export default function Create() {
             paddingBottom: isDesktop ? spacing(12) : spacing(24),
           }}
         >
-          {RECENT_TICKETS.map((ticket, i) => (
+          {historyLoading && (
+            <Text style={[styles.historyMeta, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>Loading your tickets...</Text>
+          )}
+          {historyError && (
+            <Text style={[styles.historyMeta, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>{historyError}</Text>
+          )}
+          {!historyLoading && !historyError && recentTickets.length === 0 && (
+            <Text style={[styles.historyMeta, { color: colors.inkMuted, fontFamily: fontFamilies.body }]}>You have not created any tickets yet.</Text>
+          )}
+          {recentTickets.map((ticket, i) => (
             <View
               key={ticket.id}
               style={[
@@ -401,7 +430,7 @@ export default function Create() {
                   backgroundColor: colors.surface,
                   borderBottomColor: colors.border,
                 },
-                i < RECENT_TICKETS.length - 1 && { borderBottomWidth: 1 },
+                i < recentTickets.length - 1 && { borderBottomWidth: 1 },
               ]}
             >
               <View

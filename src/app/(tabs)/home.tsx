@@ -1,6 +1,7 @@
 import Navbar from "@/components/Navbar";
 import { useLumTheme } from "@/theme/ThemeContext";
 import { useRouter } from "expo-router";
+import HomePage from "@/components/HomePage";
 import { StyleSheet, Text, View, useWindowDimensions } from "react-native";
 
 type TabRoute = "Home" | "BuyTicket" | "Create" | "Messaging" | "Feeds" | "Settings";
@@ -37,10 +38,7 @@ export default function HomeTabScreen() {
           },
         ]}
       >
-        <View style={styles.card}>
-          <Text style={[styles.title, { color: colors.ink }]}>Home</Text>
-          <Text style={[styles.subtitle, { color: colors.inkMuted }]}>I will do on it</Text>
-        </View>
+        <HomePage />
       </View>
     </View>
   );
@@ -53,8 +51,7 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 24,
+    alignItems: "stretch",
   },
   card: {
     width: "100%",

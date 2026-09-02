@@ -715,7 +715,7 @@ export default function PaymentPage({ payload, onClose, onComplete, creationFee 
             </View>
           </View>
         ) : (
-          {Content()}
+          Content()
         )}
       </View>
     </Wrapper>

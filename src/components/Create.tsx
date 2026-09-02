@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import { useState } from "react";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import { createElement, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -83,6 +84,10 @@ function makeId() {
   return Math.random().toString(36).slice(2, 9);
 }
 
+function formatDateValue(value: Date) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+}
+
 /* ------------------------------------------------------------------ */
 // Main Component
 /* ------------------------------------------------------------------ */
@@ -113,7 +118,9 @@ export default function Create() {
   const [subtitle, setSubtitle] = useState("");
   const [organizer, setOrganizer] = useState("");
   const [date, setDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [time, setTime] = useState("");
+  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
   const [location, setLocation] = useState("");
   const [route, setRoute] = useState<RouteForm>({
     from: "",
@@ -203,7 +210,7 @@ export default function Create() {
     category,
     image: imageName || undefined,
     organizer,
-    date: date ? `${date}T00:00:00` : new Date().toISOString(),
+    date: selectedDate ? `${formatDateValue(selectedDate)}T00:00:00.000Z` : new Date().toISOString(),
     time,
     location,
     route: showRoute
@@ -238,11 +245,7 @@ export default function Create() {
       Alert.alert("Authentication required", "Please log in before creating a ticket.");
       return;
     }
-    if (!businessProfile?.id || !businessProfile.isVerified) {
-      Alert.alert("Verified business profile required", "Complete and verify your business profile before creating tickets.");
-      return;
-    }
-    if (!title.trim() || !organizer.trim() || !location.trim() || !date.trim() || !time.trim()) {
+    if (!title.trim() || !organizer.trim() || !location.trim() || !selectedDate || !selectedTime) {
       Alert.alert("Missing details", "Add the title, organizer, date, time, and location before continuing.");
       return;
     }
@@ -254,7 +257,10 @@ export default function Create() {
   };
 
   const handlePay = async () => {
-    if (!businessProfile?.id) return;
+    if (!businessProfile?.id) {
+      Alert.alert("Business profile required", "A business profile is needed by the publishing API, but you can continue through the payment step.");
+      return;
+    }
     setPaying(true);
     try {
       const token = await getToken();
@@ -326,7 +332,9 @@ export default function Create() {
     setSubtitle("");
     setOrganizer("");
     setDate("");
+    setSelectedDate(null);
     setTime("");
+    setSelectedTime(null);
     setLocation("");
     setRoute({ from: "", to: "", duration: "", stops: "" });
     setDescription("");
@@ -936,23 +944,71 @@ export default function Create() {
 
           <View style={styles.row}>
             <FormField label={labels.date} colors={colors} style={{ flex: 1 }}>
-              <TextInput
-                placeholder="2026-08-15"
-                placeholderTextColor={colors.inkMuted}
-                value={date}
-                onChangeText={setDate}
-                style={[styles.input, inputBase]}
-              />
+              {Platform.OS === "web" ? (
+                createElement("input", {
+                  type: "date",
+                  value: date,
+                  min: formatDateValue(new Date()),
+                  onChange: (event: any) => {
+                    const value = event.currentTarget.value;
+                    setDate(value);
+                    setSelectedDate(value ? new Date(`${value}T00:00:00`) : null);
+                  },
+                  style: StyleSheet.flatten([styles.input, inputBase]),
+                })
+              ) : (
+                <View style={[styles.datePicker, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <DateTimePicker
+                    value={selectedDate || new Date()}
+                    mode="date"
+                    display="default"
+                    minimumDate={new Date()}
+                    onChange={(event: DateTimePickerEvent, value?: Date) => {
+                      if (event.type === "set" && value) {
+                        setSelectedDate(value);
+                        setDate(formatDateValue(value));
+                      }
+                    }}
+                    accentColor={colors.gold}
+                  />
+                  <Text style={[styles.dateValue, { color: selectedDate ? colors.ink : colors.inkMuted, fontFamily: fontFamilies.body }]}>
+                    {selectedDate ? formatDateValue(selectedDate) : "Select a date"}
+                  </Text>
+                </View>
+              )}
             </FormField>
             <View style={{ width: spacing(3) }} />
             <FormField label={labels.time} colors={colors} style={{ flex: 1 }}>
-              <TextInput
-                placeholder="6:00 AM"
-                placeholderTextColor={colors.inkMuted}
-                value={time}
-                onChangeText={setTime}
-                style={[styles.input, inputBase]}
-              />
+              {Platform.OS === "web" ? (
+                createElement("input", {
+                  type: "time",
+                  value: time,
+                  onChange: (event: any) => {
+                    const value = event.currentTarget.value;
+                    setTime(value);
+                    setSelectedTime(value ? new Date(`1970-01-01T${value}`) : null);
+                  },
+                  style: StyleSheet.flatten([styles.input, inputBase]),
+                })
+              ) : (
+                <View style={[styles.datePicker, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <DateTimePicker
+                    value={selectedTime || new Date()}
+                    mode="time"
+                    display="default"
+                    onChange={(event: DateTimePickerEvent, value?: Date) => {
+                      if (event.type === "set" && value) {
+                        setSelectedTime(value);
+                        setTime(value.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+                      }
+                    }}
+                    accentColor={colors.gold}
+                  />
+                  <Text style={[styles.dateValue, { color: selectedTime ? colors.ink : colors.inkMuted, fontFamily: fontFamilies.body }]}>
+                    {selectedTime ? time : "Select a time"}
+                  </Text>
+                </View>
+              )}
             </FormField>
           </View>
 
@@ -1402,6 +1458,19 @@ const styles = StyleSheet.create({
     borderRadius: radii.lg,
     paddingHorizontal: spacing(4),
     fontSize: 15,
+  },
+  datePicker: {
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: radii.lg,
+    paddingHorizontal: spacing(2),
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing(2),
+  },
+  dateValue: {
+    flex: 1,
+    fontSize: 14,
   },
   textarea: {
     borderWidth: 1,
